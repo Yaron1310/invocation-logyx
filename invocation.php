@@ -1,12 +1,13 @@
 <?php
 /**
  * Plugin Name:       Invocation - AI Page & Section Builder
- * Plugin URI:        https://github.com/invocation97/invocation
+ * Plugin URI:        https://danilob.codes
  * Description:       Build styled Gutenberg page content with AI, using your own block theme. Brings your own AI provider via WordPress Connectors.
  * Version:           0.2.0
  * Requires at least: 7.0
  * Requires PHP:      8.1
- * Author:            Invocation
+ * Author:            Danilo Benovic
+ * Author URI:        https://danilob.codes
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       invocation

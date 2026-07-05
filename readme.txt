@@ -1,5 +1,5 @@
 === Invocation - AI Page & Section Builder ===
-Contributors: invocation97
+Contributors: danilo1997
 Tags: ai, gutenberg, blocks, patterns, content
 Requires at least: 7.0
 Tested up to: 7.0
@@ -29,7 +29,7 @@ Everything runs on your server. No external service, database, or Docker require
 
 Invocation generates content using the AI provider you configure in WordPress 7.0 core under Settings → Connectors (for example OpenAI, Anthropic, or Google). When you trigger a generation, refinement, or "generate Site Brief" action, the plugin sends your prompt plus relevant context from your own site (such as your theme's design tokens, the names of your registered blocks and patterns, titles/URLs of your published pages, and media metadata) to that provider through core's AI Client in order to produce block markup. No data is sent unless you take one of these actions, and the plugin itself transmits nothing to any other external service. Your AI provider credentials are managed by WordPress core Connectors, not by Invocation.
 
-Review the terms and privacy policy of whichever provider you connect (e.g. OpenAI: https://openai.com/policies, Anthropic: https://www.anthropic.com/legal, Google: https://policies.google.com) before sending content.
+Review the terms and privacy policy of whichever AI provider you connect before sending content. Those policies are published by the provider you choose (for example OpenAI, Anthropic, or Google), not by Invocation.
 
 == Installation ==
 
