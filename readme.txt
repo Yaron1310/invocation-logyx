@@ -4,7 +4,7 @@ Tags: ai, gutenberg, blocks, patterns, content
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,9 @@ Review the terms and privacy policy of whichever AI provider you connect before 
 4. Open Invocation from the admin menu (it links you to both setup steps) and generate your Site Brief.
 
 == Changelog ==
+
+= 0.2.1 =
+* Security: saving a pattern with categories now also checks the wp_pattern_category taxonomy capabilities (assign_terms to assign, edit_terms to create new categories).
 
 = 0.2.0 =
 * Bundle the WordPress MCP Adapter, so MCP works with no extra plugin install.

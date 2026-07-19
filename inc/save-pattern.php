@@ -74,9 +74,21 @@ add_action(
 				),
 				'execute_callback'    => 'invocation_ability_save_pattern',
 				'permission_callback' => static function ( array $input = array() ): bool {
-					unset( $input );
 					$type = get_post_type_object( 'wp_block' );
-					return $type ? current_user_can( $type->cap->create_posts ?? $type->cap->edit_posts ) : false;
+					if ( ! $type || ! current_user_can( $type->cap->create_posts ?? $type->cap->edit_posts ) ) {
+						return false;
+					}
+
+					// Assigning (and possibly creating) wp_pattern_category terms
+					// needs the taxonomy capability too, not just the post cap.
+					if ( ! empty( $input['categories'] ) ) {
+						$tax = get_taxonomy( 'wp_pattern_category' );
+						if ( ! $tax || ! current_user_can( $tax->cap->assign_terms ) ) {
+							return false;
+						}
+					}
+
+					return true;
 				},
 				'meta'                => array(
 					'show_in_rest' => true,
@@ -115,6 +127,29 @@ function invocation_ability_save_pattern( array $input = array() ) {
 		return new WP_Error( 'invocation_missing_title', __( 'A title is required.', 'invocation' ) );
 	}
 
+	$tax = get_taxonomy( 'wp_pattern_category' );
+	if ( $categories && $tax ) {
+		if ( ! current_user_can( $tax->cap->assign_terms ) ) {
+			return new WP_Error(
+				'invocation_cannot_assign_terms',
+				__( 'Sorry, you are not allowed to assign pattern categories.', 'invocation' )
+			);
+		}
+
+		// wp_set_object_terms() creates any missing terms for this non-hierarchical
+		// taxonomy, so creating new categories additionally requires edit_terms.
+		$new = array_filter(
+			$categories,
+			static fn ( string $name ): bool => ! term_exists( $name, 'wp_pattern_category' )
+		);
+		if ( $new && ! current_user_can( $tax->cap->edit_terms ) ) {
+			return new WP_Error(
+				'invocation_cannot_create_terms',
+				__( 'Sorry, you are not allowed to create new pattern categories.', 'invocation' )
+			);
+		}
+	}
+
 	// Validate + normalise the markup the same way generated layouts are.
 	$normalized = invocation_normalize_markup( $content );
 	if ( is_wp_error( $normalized ) ) {
@@ -144,8 +179,7 @@ function invocation_ability_save_pattern( array $input = array() ) {
 	}
 
 	$assigned = array();
-	if ( $categories && taxonomy_exists( 'wp_pattern_category' ) ) {
-		// wp_set_object_terms() creates any missing terms for this non-hierarchical taxonomy.
+	if ( $categories && $tax ) {
 		wp_set_object_terms( $id, $categories, 'wp_pattern_category' );
 		$names = wp_get_object_terms( $id, 'wp_pattern_category', array( 'fields' => 'names' ) );
 		if ( ! is_wp_error( $names ) ) {
