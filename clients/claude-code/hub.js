@@ -99,6 +99,17 @@ function authHeader( site ) {
 /* -------------------------------------------------------------------------- */
 
 const sessions = new Map(); // site name -> Mcp-Session-Id (if the transport issues one)
+const initialized = new Set(); // site names that have completed the MCP handshake
+
+/*
+ * JSON-RPC request id.
+ *
+ * Numeric on purpose. JSON-RPC 2.0 allows a string id, but the WordPress MCP
+ * Adapter does not handle one reliably: on some installs a string id fails the
+ * whole request with `500 Internal error: Handler error occurred` and an `id: 0`
+ * in the reply, which reads like a server fault rather than a bad id. Numbers
+ * work everywhere, so there is nothing to gain from strings here.
+ */
 let requestCounter = 0;
 
 async function rpcPost( siteName, site, body ) {
@@ -156,10 +167,16 @@ async function rpcPost( siteName, site, body ) {
 	return JSON.parse( text );
 }
 
+/**
+ * Complete the MCP handshake with a site and remember that it is initialized.
+ *
+ * @param {string} siteName Registry name of the site.
+ * @param {Object} site     Registry entry (url, user, appPassword).
+ */
 async function remoteInitialize( siteName, site ) {
 	const init = await rpcPost( siteName, site, {
 		jsonrpc: '2.0',
-		id: `hub-init-${ ++requestCounter }`,
+		id: ++requestCounter,
 		method: 'initialize',
 		params: {
 			protocolVersion: PROTOCOL_VERSION,
@@ -181,36 +198,72 @@ async function remoteInitialize( siteName, site ) {
 	} catch ( e ) {
 		/* non-fatal */
 	}
+	initialized.add( siteName );
 }
 
+/**
+ * Forget a site's handshake so the next request re-initializes it.
+ *
+ * @param {string} siteName Registry name of the site.
+ */
+function resetSession( siteName ) {
+	sessions.delete( siteName );
+	initialized.delete( siteName );
+}
+
+/**
+ * Send one request to a site, handshaking first if needed.
+ *
+ * The handshake happens up front rather than in reaction to a failure. MCP
+ * requires initialize before anything else, and guessing from the error
+ * afterwards meant matching on server wording: a site that reports a missing
+ * session as `500 Handler error occurred` instead of a 400 mentioning
+ * "session" would never have been retried, and the real cause stayed hidden
+ * behind whatever the server happened to say.
+ *
+ * @param {string} siteName Registry name of the site.
+ * @param {Object} site     Registry entry (url, user, appPassword).
+ * @param {string} method   JSON-RPC method to call.
+ * @param {Object} params   JSON-RPC params.
+ * @return {Promise<*>} The JSON-RPC result, or null for an empty response.
+ */
 async function remoteRequest( siteName, site, method, params ) {
-	const body = {
-		jsonrpc: '2.0',
-		id: `hub-${ ++requestCounter }`,
-		method,
-		params,
-	};
+	if ( ! initialized.has( siteName ) ) {
+		await remoteInitialize( siteName, site );
+	}
+
+	const sendRequest = () =>
+		rpcPost( siteName, site, {
+			jsonrpc: '2.0',
+			id: ++requestCounter,
+			method,
+			params,
+		} );
+
 	let response;
 	try {
-		response = await rpcPost( siteName, site, body );
+		response = await sendRequest();
 	} catch ( e ) {
-		response = null;
-		// A session/initialization error is retried below; anything else rethrows.
-		if ( ! /session|initializ|400|404/i.test( String( e.message ) ) ) {
+		// A session can expire or be dropped server-side; re-handshake once.
+		if ( ! /session/i.test( String( e.message ) ) ) {
 			throw e;
 		}
-	}
-	const needsInit =
-		! response ||
-		( response.error &&
-			/session|initializ/i.test(
-				String( response.error.message || '' )
-			) );
-	if ( needsInit ) {
-		sessions.delete( siteName );
+		resetSession( siteName );
 		await remoteInitialize( siteName, site );
-		response = await rpcPost( siteName, site, body );
+		response = await sendRequest();
 	}
+
+	// Same case, reported in-band rather than as an HTTP error.
+	if (
+		response &&
+		response.error &&
+		/session/i.test( String( response.error.message || '' ) )
+	) {
+		resetSession( siteName );
+		await remoteInitialize( siteName, site );
+		response = await sendRequest();
+	}
+
 	if ( response && response.error ) {
 		throw new Error(
 			response.error.message || JSON.stringify( response.error )
