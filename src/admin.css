@@ -1,0 +1,215 @@
+/**
+ * Invocation admin styles.
+ *
+ * One content measure, one spacing scale, shared by the server-rendered tabs
+ * (Connect / Setup) and the React Site Brief app — previously each carried its
+ * own ad-hoc inline styles, which is why widths and gaps disagreed.
+ */
+
+:root {
+	--invocation-measure: 780px;
+	--invocation-gap: 16px;
+	--invocation-gap-lg: 24px;
+}
+
+/*
+ * Tab transitions.
+ *
+ * Switching tabs is a real navigation (?tab=…), and WordPress 7.0 already opts
+ * the admin into cross-document view transitions — wp-admin/css/view-transitions.css
+ * declares `@view-transition { navigation: auto }` inside a
+ * `prefers-reduced-motion: no-preference` block. So we must NOT redeclare the
+ * opt-in here: doing it outside that guard would re-enable animation for people
+ * who asked for less motion. We only name our own boxes and give them a
+ * quieter animation than the default root cross-fade, and we mirror core's
+ * reduced-motion guard so the names disappear too.
+ */
+@media (prefers-reduced-motion: no-preference) {
+	.invocation-panel {
+		view-transition-name: invocation-panel;
+	}
+
+	/* Named separately so the tab bar stays put while the panel moves. */
+	.invocation-tabs {
+		view-transition-name: invocation-tabs;
+	}
+
+	::view-transition-old(invocation-panel) {
+		animation: invocation-exit 90ms cubic-bezier(0.4, 0, 1, 1) both;
+	}
+
+	::view-transition-new(invocation-panel) {
+		animation: invocation-enter 210ms cubic-bezier(0, 0, 0.2, 1) both;
+	}
+
+	/* Cross-fade only — no drift on the tab bar. */
+	::view-transition-old(invocation-tabs),
+	::view-transition-new(invocation-tabs) {
+		animation-duration: 150ms;
+	}
+}
+
+@keyframes invocation-exit {
+	to {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+}
+
+@keyframes invocation-enter {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+}
+
+/* Tab panel wrapper: consistent breathing room under the nav tabs. */
+.invocation-panel {
+	margin-top: var(--invocation-gap-lg);
+	max-width: var(--invocation-measure);
+}
+
+.invocation-panel > :first-child {
+	margin-top: 0;
+}
+
+.invocation-panel > :last-child {
+	margin-bottom: 0;
+}
+
+/* Intro copy at the top of a tab. */
+.invocation-intro {
+	margin: 0 0 var(--invocation-gap-lg);
+	font-size: 14px;
+	line-height: 1.6;
+	color: #50575e;
+}
+
+/* A titled section within a tab. */
+.invocation-section {
+	margin: 0 0 var(--invocation-gap-lg);
+	padding: 0 0 var(--invocation-gap-lg);
+	border-bottom: 1px solid #dcdcde;
+}
+
+.invocation-section:last-child {
+	margin-bottom: 0;
+	padding-bottom: 0;
+	border-bottom: 0;
+}
+
+.invocation-section__title {
+	margin: 0 0 4px;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.invocation-section__desc {
+	margin: 0 0 12px;
+	color: #50575e;
+}
+
+/* Numbered steps inside a guide. */
+.invocation-step {
+	margin: 0 0 var(--invocation-gap);
+}
+
+.invocation-step:last-child {
+	margin-bottom: 0;
+}
+
+.invocation-step__label {
+	display: block;
+	margin: 0 0 6px;
+	font-weight: 600;
+}
+
+/* Code + copyable fields. */
+.invocation-code,
+.invocation-field {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+	margin: 0 0 8px;
+	padding: 10px 12px;
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+	font-family: Menlo, Consolas, monaco, monospace;
+	font-size: 12px;
+	line-height: 1.6;
+	color: #1d2327;
+	overflow-x: auto;
+	white-space: pre;
+}
+
+.invocation-field {
+	resize: vertical;
+	white-space: pre;
+}
+
+.invocation-field:focus {
+	border-color: #3858e9;
+	box-shadow: 0 0 0 1px #3858e9;
+	outline: 2px solid transparent;
+}
+
+/* Button row under a snippet. */
+.invocation-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 8px;
+}
+
+/* Small print. */
+.invocation-note {
+	margin: 8px 0 0;
+	color: #646970;
+	font-size: 13px;
+}
+
+/* Inline "recommended" / status pill. */
+.invocation-badge {
+	display: inline-block;
+	margin-left: 8px;
+	padding: 1px 8px;
+	border-radius: 9px;
+	background: #edeff9;
+	color: #2145e6;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	vertical-align: middle;
+}
+
+/* Site Brief (React) — match the same measure and rhythm as the other tabs. */
+.invocation-brief {
+	max-width: var(--invocation-measure);
+}
+
+.invocation-brief .components-card + .components-card {
+	margin-top: var(--invocation-gap);
+}
+
+.invocation-brief__header {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: var(--invocation-gap);
+	margin: 0 0 var(--invocation-gap-lg);
+}
+
+/* The intro sits beside the action button here, so it carries no bottom gap. */
+.invocation-brief__header .invocation-intro {
+	flex: 1 1 320px;
+	margin-bottom: 0;
+}
+
+.invocation-brief__footer {
+	margin-top: var(--invocation-gap);
+}

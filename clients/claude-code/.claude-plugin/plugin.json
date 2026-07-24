@@ -1,7 +1,7 @@
 {
   "name": "invocation",
   "description": "Build on-theme Gutenberg layouts across all your self-hosted WordPress sites from Claude Code, via the Invocation Fleet Hub MCP server.",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "author": {
     "name": "Invocation"
   },

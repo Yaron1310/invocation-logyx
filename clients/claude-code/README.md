@@ -4,6 +4,8 @@ Drive one or **many** WordPress sites running [Invocation](https://github.com/in
 
 The plugin ships the **Invocation Fleet Hub** (`hub.js`), a zero-dependency MCP server that reads a registry of your sites and routes every tool call to the site you name. One plugin, one tool set, unlimited sites — ideal for agencies maintaining a fleet of client sites.
 
+> **Just one site, or prefer a GUI?** Use **Claude Desktop** instead — open **Invocation → Connect** in wp-admin and paste the generated block into `claude_desktop_config.json`. No marketplace, no CLI. This plugin is the better choice for many sites or terminal-based work.
+
 ## Prerequisites (on each WordPress site)
 
 1. WordPress **7.0+**.
@@ -25,6 +27,16 @@ Requires Node 18+ on the machine running Claude Code.
 
 ## Register your sites
 
+### The easy way: `/invocation:connect`
+
+```
+/invocation:connect
+```
+
+It asks for the site URL, points you at the site's **Invocation → Connect** tab to create an Application Password, then writes and verifies the registry entry for you. Run it once per site. (Claude will also start this flow on its own if you just say "connect my site blog.example.com".)
+
+### The manual way
+
 Create `~/.config/invocation/sites.json` (see `sites.example.json`):
 
 ```json
@@ -34,18 +46,19 @@ Create `~/.config/invocation/sites.json` (see `sites.example.json`):
 }
 ```
 
+Get the Application Password from each site's **Invocation** admin page → **Connect** (or *Users → Profile → Application Passwords*). The Connect panel there shows a copy-ready snippet with your endpoint URL and username already filled in.
+
 - The key is the **site name** you'll use in conversation ("create a pricing page on client-shop").
 - `url` is the site origin; the hub appends the endpoint path. Paste a full endpoint URL instead (anything containing `/invocation/mcp` or `rest_route=`) for non-pretty-permalink or unusual setups.
 - To keep the registry elsewhere, set `INVOCATION_SITES_FILE=/path/to/sites.json` in your environment.
-- Adding a site later = adding one JSON entry. Tool calls pick it up immediately; restart (or `/mcp` reconnect) to refresh the `site` name list shown in tool schemas.
+- Adding a site later = adding one JSON entry. Run `check-site` on the new name and the hub refreshes its tool list in place, so no restart is needed.
 
 Keep this file out of git — it holds credentials. `chmod 600` it.
 
 ## Use it
 
-Restart Claude Code, then:
-
 - `list-sites` — see what's registered.
+- `check-site` — verify a site is reachable and its credentials work.
 - Every Invocation tool (`invocation-create-page`, `invocation-get-theme-context`, …) takes a required `site` argument, so you can just say things like:
   - *"On **blog**, generate a three-card pricing section matching the theme and add it to the Pricing page."*
   - *"Create the same 'Summer sale' landing page on **blog** and **client-shop**, adapted to each site's theme."*
@@ -53,7 +66,7 @@ Restart Claude Code, then:
 
 ## Tools
 
-`list-sites`, plus per site: `invocation-generate-layout`, `invocation-refine-block`, `invocation-list-patterns`, `invocation-search-media`, `invocation-search-internal-links`, `invocation-get-theme-context`, `invocation-list-blocks`, `invocation-gather-site-context`, `invocation-create-page`, `invocation-update-page`, `invocation-save-pattern`, `invocation-list-templates`.
+`list-sites` and `check-site` (always available, even before any site is registered), plus per site: `invocation-generate-layout`, `invocation-refine-block`, `invocation-list-patterns`, `invocation-search-media`, `invocation-search-internal-links`, `invocation-get-theme-context`, `invocation-list-blocks`, `invocation-gather-site-context`, `invocation-create-page`, `invocation-update-page`, `invocation-save-pattern`, `invocation-list-templates`.
 
 The hub fetches the tool list live from your sites, so new abilities in future Invocation versions appear automatically.
 
@@ -82,7 +95,7 @@ or use the official proxy:
   "mcpServers": {
     "invocation": {
       "command": "npx",
-      "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
+      "args": ["-y", "@automattic/mcp-wordpress-remote@0.3.5"],
       "env": {
         "WP_API_URL": "https://my-site.com/wp-json/invocation/mcp",
         "WP_API_USERNAME": "your-username",

@@ -71,7 +71,19 @@ Invocation bundles the official WordPress MCP Adapter and registers an MCP serve
 
 Tools are named `invocation-<ability>` (e.g. `invocation-generate-layout`). Authenticate with a WordPress **Application Password**. This lets an agent in **Claude Code**, Claude Desktop, Cursor, etc. generate *and persist* whole pages end-to-end (`generate-layout` → `create-page`).
 
-A ready-to-use **Claude Code plugin** lives in [`clients/claude-code/`](clients/claude-code/) — see its README for install.
+### Connecting a Claude client
+
+Open **Invocation → Connect** in wp-admin. It creates an Application Password in one click and hands you a copy-ready config for either client.
+
+- **Claude Desktop** (easiest) — paste the generated block into `claude_desktop_config.json`. It proxies to this site through [`@automattic/mcp-wordpress-remote`](https://www.npmjs.com/package/@automattic/mcp-wordpress-remote); requires Node.js.
+- **Claude Code** — a ready-made plugin in [`clients/claude-code/`](clients/claude-code/), installed from this repo's marketplace. One install drives any number of sites via the bundled Fleet Hub:
+  ```
+  /plugin marketplace add invocation97/invocation
+  /plugin install invocation@invocation
+  /invocation:connect
+  ```
+
+> **claude.ai custom connectors are not supported yet.** They authenticate over OAuth, which the WordPress REST API does not speak — it uses Application Passwords. Use Claude Desktop in the meantime.
 
 ## Editor experience
 

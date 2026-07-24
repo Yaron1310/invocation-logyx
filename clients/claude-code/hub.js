@@ -236,6 +236,34 @@ const LIST_SITES_TOOL = {
 	},
 };
 
+const CHECK_SITE_TOOL = {
+	name: 'check-site',
+	description:
+		"Check that a registered site is reachable and its credentials work, reporting the WordPress-side server name and how many tools it offers. Use this to verify a newly added site — it works even before that site's own tools have been registered in this session.",
+	inputSchema: {
+		type: 'object',
+		properties: {
+			site: {
+				type: 'string',
+				description:
+					'Name of the site to check, as it appears in the registry.',
+			},
+		},
+		required: [ 'site' ],
+		additionalProperties: false,
+	},
+};
+
+/**
+ * Tools that exist regardless of registry state.
+ *
+ * These must never depend on a reachable site: on a fresh install the registry
+ * does not exist yet, and if `tools/list` failed outright the client would
+ * register nothing at all — leaving no way to discover or diagnose that. They
+ * are the bootstrap surface for connecting the first site.
+ */
+const ALWAYS_TOOLS = [ LIST_SITES_TOOL, CHECK_SITE_TOOL ];
+
 function withSiteParam( tool, siteNames ) {
 	const schema = tool.inputSchema || { type: 'object', properties: {} };
 	const properties = {
@@ -254,12 +282,29 @@ function withSiteParam( tool, siteNames ) {
 	return { ...tool, inputSchema: { ...schema, properties, required } };
 }
 
-async function buildToolList( sites ) {
+/**
+ * Build the advertised tool list.
+ *
+ * Never throws: a failure here would make the client register no tools at all,
+ * including the ones needed to fix the failure. When no site can be reached the
+ * always-available tools are returned and nothing is cached, so the full list
+ * appears as soon as a site works.
+ */
+async function buildToolList() {
 	if ( toolCache ) {
 		return toolCache;
 	}
+
+	let sites;
+	try {
+		sites = loadSites();
+	} catch ( e ) {
+		// No (or unreadable) registry — the normal state before the first
+		// connect. list-sites reports the same error with guidance.
+		return ALWAYS_TOOLS;
+	}
+
 	const siteNames = Object.keys( sites );
-	const errors = [];
 	for ( const name of siteNames ) {
 		try {
 			const result = await remoteRequest(
@@ -271,21 +316,17 @@ async function buildToolList( sites ) {
 			const tools = ( result && result.tools ) || [];
 			if ( tools.length ) {
 				toolCache = [
-					LIST_SITES_TOOL,
+					...ALWAYS_TOOLS,
 					...tools.map( ( t ) => withSiteParam( t, siteNames ) ),
 				];
 				return toolCache;
 			}
-			errors.push( `${ name }: empty tool list` );
 		} catch ( e ) {
-			errors.push( `${ name }: ${ e.message }` );
+			// Try the next site; check-site reports per-site failures in detail.
 		}
 	}
-	throw new Error(
-		`No registered site answered tools/list. Tried — ${ errors.join(
-			' | '
-		) }`
-	);
+
+	return ALWAYS_TOOLS;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -311,6 +352,22 @@ function toolError( id, message ) {
 	} );
 }
 
+/**
+ * Rebuild the tool list and, if it grew, tell the client to re-read it.
+ *
+ * Connecting a site mid-session turns the bootstrap-only list into the full
+ * one. Without this notification the new tools would not appear until the user
+ * restarted or reconnected the server.
+ */
+async function refreshToolList() {
+	const before = toolCache ? toolCache.length : ALWAYS_TOOLS.length;
+	toolCache = null;
+	const after = ( await buildToolList() ).length;
+	if ( after !== before ) {
+		send( { jsonrpc: '2.0', method: 'notifications/tools/list_changed' } );
+	}
+}
+
 async function handleToolCall( id, params ) {
 	const { name, arguments: args = {} } = params || {};
 	let sites;
@@ -331,6 +388,43 @@ async function handleToolCall( id, params ) {
 				{ type: 'text', text: JSON.stringify( listing, null, 2 ) },
 			],
 		} );
+	}
+
+	if ( name === 'check-site' ) {
+		const target = args.site;
+		if ( ! target || ! sites[ target ] ) {
+			return toolError(
+				id,
+				`Unknown or missing "site" argument${
+					target ? ` "${ target }"` : ''
+				}. Registered sites: ${ Object.keys( sites ).join( ', ' ) }.`
+			);
+		}
+		try {
+			const init = await remoteRequest(
+				target,
+				sites[ target ],
+				'tools/list',
+				{}
+			);
+			const tools = ( init && init.tools ) || [];
+			// The site works, so the cached (possibly bootstrap-only) list is
+			// stale. Refresh it and tell the client to re-read it.
+			await refreshToolList();
+			return sendResult( id, {
+				content: [
+					{
+						type: 'text',
+						text: `Connected to "${ target }" successfully. It offers ${ tools.length } tools.`,
+					},
+				],
+			} );
+		} catch ( e ) {
+			return toolError(
+				id,
+				`Could not connect to "${ target }": ${ e.message }`
+			);
+		}
 	}
 
 	const { site: siteName, ...rest } = args;
@@ -375,23 +469,17 @@ async function handleMessage( message ) {
 			return sendResult( id, {
 				protocolVersion:
 					( params && params.protocolVersion ) || PROTOCOL_VERSION,
-				capabilities: { tools: {} },
+				capabilities: { tools: { listChanged: true } },
 				serverInfo: { name: 'invocation-fleet-hub', version: '0.1.0' },
 				instructions:
-					'Routes Invocation tools to multiple WordPress sites. Call list-sites first; every other tool takes a required "site" argument naming the target site.',
+					'Routes Invocation tools to multiple WordPress sites. Call list-sites first; every other tool takes a required "site" argument naming the target site. If only list-sites and check-site are available, no site is registered yet — run /invocation:connect to add one.',
 			} );
 
 		case 'ping':
 			return sendResult( id, {} );
 
 		case 'tools/list':
-			try {
-				return sendResult( id, {
-					tools: await buildToolList( loadSites() ),
-				} );
-			} catch ( e ) {
-				return sendError( id, -32603, e.message );
-			}
+			return sendResult( id, { tools: await buildToolList() } );
 
 		case 'tools/call':
 			return handleToolCall( id, params );

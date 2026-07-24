@@ -41,8 +41,8 @@ Run **Plugin Check** against the packaged file set (this is what reviewers run).
 ```bash
 docker compose run --rm --user 33:33 -e HOME=/tmp wpcli \
   wp plugin check invocation --format=csv \
-  --exclude-files=.gitignore,README.md,docker-compose.yml,package.json,package-lock.json,invocation.zip \
-  --exclude-directories=node_modules,src,clients
+  --exclude-files=.gitignore,.eslintignore,.eslintrc.json,.prettierignore,.prettierrc.js,.editorconfig,.DS_Store,.mcp.json,.env,README.md,CLAUDE.md,RELEASE.md,CONTRIBUTING.md,SECURITY.md,docker-compose.yml,package.json,package-lock.json,composer.lock,invocation.zip,phpcs.xml.dist \
+  --exclude-directories=node_modules,src,clients,tools,.claude,.claude-plugin,.github,.vscode,assets
 ```
 
 Expected: `No errors found.` Fix anything reported before continuing.
@@ -85,22 +85,83 @@ gh release create vX.Y.Z invocation.zip --title "vX.Y.Z" --notes "…changelog�
 4. **Assets** (not in the plugin zip) go in the SVN `assets/` dir: `icon-256x256.png`, `banner-772x250.png`, `screenshot-1.png` … (referenced in readme's `== Screenshots ==`).
 5. Confirm the live `Stable tag` in trunk `readme.txt` matches the tag you created.
 
+### Pinned third-party versions
+- The Claude Desktop config offered on the **Connect** tab pins the Automattic MCP proxy via `INVOCATION_WP_MCP_PROXY_VERSION` in `inc/admin.php` (currently `0.3.5`). It is fetched by `npx` on the user's machine at launch, so `@latest` would let an untested release land in their setup unannounced. Before a release, check for a newer version, verify it against a real MCP endpoint, then bump the constant and the copy in `clients/claude-code/README.md`.
+
 ### Notes for WP.org
 - The **MCP Adapter** is **bundled** via Composer (loaded with the Jetpack Autoloader) — run `composer install` before packaging so `vendor/` is present. There are no external required plugins, so no `Requires Plugins` header is needed.
 - No secrets ship in the repo; keys are the user's, held by core Connectors.
 
 ## 7. Claude Code plugin (companion, in `clients/claude-code/`)
 
-This is distributed separately from the WP plugin (it's not in the zip).
+Distributed separately from the WP plugin (it's **not** in the zip) — published via the marketplace manifest at the **repo root**, `/.claude-plugin/marketplace.json`, whose single plugin entry has `"source": "./clients/claude-code"`. Relative sources resolve against the marketplace root (the repo root), and `/plugin marketplace add invocation97/invocation` fetches that root manifest.
 
-1. Keep `clients/claude-code/.claude-plugin/plugin.json` `version` in sync with the WP plugin (or version it independently).
-2. Users install it from this repo:
+1. Version it independently in `clients/claude-code/.claude-plugin/plugin.json` (currently 0.3.1). Commands (`commands/*.md`) and skills (`skills/*/SKILL.md`) are auto-discovered — no need to list them in `plugin.json`.
+2. Validate both manifests: `claude plugin validate . --strict` and `claude plugin validate ./clients/claude-code --strict`.
+3. **Install it and use it** (see below) — validation only checks manifest shape, not that the thing works.
+4. Publishing = push to `main` (and optionally `git tag`); users refresh with `/plugin marketplace update`. Install:
    ```
    /plugin marketplace add invocation97/invocation
    /plugin install invocation@invocation
    ```
-   For that to resolve, ensure a `.claude-plugin/marketplace.json` is discoverable at the path the marketplace points to (currently under `clients/claude-code/`). For public GitHub install you may move/copy the marketplace manifest to the repo root, or host the Claude plugin in its own repo.
-3. It requires the site to have Invocation + the MCP Adapter active and an Application Password.
+5. Connecting a site: `/invocation:connect` (or the **Invocation → Connect** admin tab, added in WP 0.2.2) creates an Application Password and writes `~/.config/invocation/sites.json`. The site needs Invocation active (the MCP Adapter is bundled).
+
+### Iterating on the plugin locally
+
+Point a marketplace at the working tree, so every edit is one update away. It reads whatever branch is checked out:
+
+```bash
+claude plugin marketplace add /absolute/path/to/blocksmith-plugin
+claude plugin install invocation@invocation
+```
+
+After changing anything under `clients/claude-code/`, bump `plugin.json` `version` and run the update loop — `plugin update` is a no-op if the version has not changed:
+
+```bash
+claude plugin marketplace update invocation
+claude plugin update invocation@invocation
+# then restart Claude Code (or /reload-plugins) — .mcp.json and MCP servers
+# only load at startup; SKILL.md edits apply immediately
+```
+
+Inspect what a user would actually get, including the always-on token cost:
+
+```bash
+claude plugin details invocation@invocation
+```
+
+Swap back to the published source when you're done testing:
+
+```bash
+claude plugin marketplace remove invocation
+claude plugin marketplace add invocation97/invocation
+```
+
+### Smoke test from a *fresh* state
+
+Do this before every Claude-plugin release, in an isolated config so your real setup is untouched:
+
+```bash
+export CLAUDE_CONFIG_DIR=$(mktemp -d)
+claude plugin marketplace add /absolute/path/to/blocksmith-plugin
+claude plugin install invocation@invocation
+claude plugin details invocation@invocation   # expect 4 skills + 1 MCP server
+```
+
+Then exercise the hub the way a brand-new user would — **with no site registry at all**:
+
+```bash
+# Pick the newest cached build explicitly — after an update the cache holds
+# several versions, and a bare glob would silently run the older one.
+HUB=$(ls -d "$CLAUDE_CONFIG_DIR"/plugins/cache/invocation/invocation/*/hub.js | sort -V | tail -1)
+
+printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+  | INVOCATION_SITES_FILE=/nonexistent/sites.json node "$HUB"
+```
+
+`tools/list` must return `list-sites` and `check-site` — **never an error**. Shipping 0.3.0 with a throwing `tools/list` meant a new user's client registered *zero* tools and had no way to diagnose it; the happy path (a registry that already exists) hides this completely, which is why the fresh-state check is the one that matters. Finish by writing a registry, running `check-site`, and confirming the list grows to 14 tools without a restart.
 
 ## 8. Post-release
 
@@ -109,13 +170,25 @@ This is distributed separately from the WP plugin (it's not in the zip).
 
 ## Quick checklist
 
+### WordPress plugin
+
 - [ ] Version synced in `invocation.php`, `readme.txt` (Stable tag), `package.json`
 - [ ] `readme.txt` Tested up to + Changelog updated
 - [ ] `npm ci && npm run build`
-- [ ] Lint + `php -l` clean
+- [ ] `npm run lint` clean (ESLint + `php -l` + PHPCS)
 - [ ] Plugin Check: No errors found
 - [ ] Manual smoke test on WP 7.0
-- [ ] `npm run plugin-zip` + verified zip contents
+- [ ] `npm run plugin-zip` + verified zip contents (no `.claude-plugin/`, `clients/`, `tools/`)
 - [ ] External-service disclosure in `readme.txt` (WP.org)
 - [ ] Git tag + GitHub release with `invocation.zip`
 - [ ] WP.org trunk + tag committed; assets uploaded
+
+### Claude Code plugin
+
+- [ ] `plugin.json` `version` bumped (required — `plugin update` no-ops without it)
+- [ ] `claude plugin validate .` and `… ./clients/claude-code`, both `--strict`
+- [ ] `INVOCATION_WP_MCP_PROXY_VERSION` still current, and verified against a live endpoint
+- [ ] Installed and updated via the loop: `plugin marketplace update` → `plugin update` → restart
+- [ ] `claude plugin details` shows the expected skills + MCP server
+- [ ] **Fresh-state check**: with no registry, `tools/list` returns `list-sites` + `check-site` and does not error
+- [ ] Connect a real site end to end: `/invocation:connect` → `check-site` → tools usable without a restart

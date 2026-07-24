@@ -1,0 +1,14 @@
+{
+  "name": "invocation",
+  "description": "Build on-theme Gutenberg layouts on your self-hosted WordPress sites from Claude Code, grounded in each site's own theme, patterns, media, and links.",
+  "owner": {
+    "name": "invocation97"
+  },
+  "plugins": [
+    {
+      "name": "invocation",
+      "source": "./clients/claude-code",
+      "description": "Drive one or many WordPress sites running Invocation from Claude Code over MCP: generate, fill, and refine on-theme Gutenberg layouts, and connect new sites with /invocation:connect."
+    }
+  ]
+}

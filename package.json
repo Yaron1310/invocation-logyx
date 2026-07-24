@@ -1,7 +1,7 @@
 {
   "name": "invocation",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Build styled Gutenberg page content with AI, grounded in your own block theme.",
   "license": "GPL-2.0-or-later",
   "files": [

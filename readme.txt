@@ -4,7 +4,7 @@ Tags: ai, gutenberg, blocks, patterns, content
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.1
+Stable tag: 0.2.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,6 +22,7 @@ Features:
 * Uses real media and real internal links — never invented URLs.
 * A Site Brief that keeps every generation on-brand.
 * A built-in MCP server — drive everything from AI agents like Claude Code, with no extra plugin to install.
+* A Connect tab that links the site to Claude Desktop or Claude Code in a couple of clicks.
 
 Everything runs on your server. No external service, database, or Docker required. Capabilities are registered as WordPress Abilities, so they are also available over REST and to MCP agents.
 
@@ -39,6 +40,10 @@ Review the terms and privacy policy of whichever AI provider you connect before 
 4. Open Invocation from the admin menu (it links you to both setup steps) and generate your Site Brief.
 
 == Changelog ==
+
+= 0.2.2 =
+* Reorganize the admin page into tabs (Site Brief, Connect, Setup) with consistent spacing and a single content width.
+* Add a Connect tab: one-click Application Password creation, this site's MCP endpoint, and copy-ready configuration for Claude Desktop and Claude Code.
 
 = 0.2.1 =
 * Security: saving a pattern with categories now also checks the wp_pattern_category taxonomy capabilities (assign_terms to assign, edit_terms to create new categories).

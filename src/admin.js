@@ -16,10 +16,11 @@ import {
 	Notice,
 	Spinner,
 	Flex,
-	FlexItem,
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
+
+import './admin.css';
 
 const OPTION = 'invocation_site_brief';
 
@@ -123,41 +124,29 @@ function SiteBriefApp() {
 	}
 
 	return (
-		<div style={ { maxWidth: '760px' } }>
-			<Flex
-				justify="space-between"
-				align="center"
-				style={ { margin: '16px 0' } }
-			>
-				<FlexItem>
-					<h1 style={ { margin: 0 } }>
-						{ __( 'Invocation — Site Brief', 'invocation' ) }
-					</h1>
-				</FlexItem>
-				<FlexItem>
-					<Button
-						variant="secondary"
-						onClick={ generate }
-						disabled={ isGenerating || isSaving }
-					>
-						{ isGenerating ? (
-							<Flex gap={ 2 } justify="center">
-								<Spinner />
-								{ __( 'Analyzing…', 'invocation' ) }
-							</Flex>
-						) : (
-							__( 'Generate from my site', 'invocation' )
-						) }
-					</Button>
-				</FlexItem>
-			</Flex>
-
-			<p>
-				{ __(
-					'The Site Brief grounds every Invocation generation in your site’s purpose, audience and voice. Generate it from your content, then edit anything.',
-					'invocation'
-				) }
-			</p>
+		<div className="invocation-brief">
+			<div className="invocation-brief__header">
+				<p className="invocation-intro">
+					{ __(
+						'The Site Brief grounds every Invocation generation in your site’s purpose, audience and voice. Generate it from your content, then edit anything.',
+						'invocation'
+					) }
+				</p>
+				<Button
+					variant="secondary"
+					onClick={ generate }
+					disabled={ isGenerating || isSaving }
+				>
+					{ isGenerating ? (
+						<Flex gap={ 2 } justify="center">
+							<Spinner />
+							{ __( 'Analyzing…', 'invocation' ) }
+						</Flex>
+					) : (
+						__( 'Generate from my site', 'invocation' )
+					) }
+				</Button>
+			</div>
 
 			{ notice && (
 				<Notice
@@ -200,7 +189,7 @@ function SiteBriefApp() {
 				</CardBody>
 			</Card>
 
-			<Card style={ { marginTop: '16px' } }>
+			<Card>
 				<CardHeader>
 					<h3 style={ { margin: 0 } }>
 						{ __( 'Content guidance', 'invocation' ) }
@@ -231,7 +220,7 @@ function SiteBriefApp() {
 				</CardBody>
 			</Card>
 
-			<Flex justify="flex-start" style={ { marginTop: '16px' } }>
+			<Flex justify="flex-start" className="invocation-brief__footer">
 				<Button
 					variant="primary"
 					onClick={ save }
@@ -244,7 +233,7 @@ function SiteBriefApp() {
 			</Flex>
 
 			{ brief.generatedAt && (
-				<p style={ { color: '#757575', marginTop: '12px' } }>
+				<p className="invocation-note">
 					{ __( 'Last generated:', 'invocation' ) }{ ' ' }
 					{ brief.generatedAt }
 				</p>
@@ -257,3 +246,38 @@ const root = document.getElementById( 'invocation-admin-root' );
 if ( root ) {
 	createRoot( root ).render( <SiteBriefApp /> );
 }
+
+// Select-all on click for the readonly snippet field in the Connect panel.
+document
+	.querySelectorAll( '.invocation-connect-snippet' )
+	.forEach( ( field ) => {
+		field.addEventListener( 'click', () => field.select() );
+	} );
+
+// Wire the "Copy snippet" buttons in the server-rendered Connect panel.
+document.querySelectorAll( '.invocation-copy' ).forEach( ( button ) => {
+	button.addEventListener( 'click', async () => {
+		const target = document.querySelector(
+			button.getAttribute( 'data-copy-target' )
+		);
+		if ( ! target ) {
+			return;
+		}
+		const text = target.value ?? target.textContent ?? '';
+		try {
+			await navigator.clipboard.writeText( text );
+		} catch ( e ) {
+			// Clipboard API unavailable (e.g. non-secure context): fall back to
+			// selecting the field so the user can copy manually.
+			if ( typeof target.select === 'function' ) {
+				target.select();
+			}
+			return;
+		}
+		const original = button.textContent;
+		button.textContent = __( 'Copied!', 'invocation' );
+		setTimeout( () => {
+			button.textContent = original;
+		}, 1500 );
+	} );
+} );
