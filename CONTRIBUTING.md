@@ -48,16 +48,22 @@ docker compose run --rm --user 33:33 -e HOME=/tmp wpcli \
 
 ## Standards
 
-- **PHP**: follows the WordPress Coding Standards; target **PHP 8.1**, `declare(strict_types=1)`. Prefix functions with `invocation_`, constants with `INVOCATION_`, and use the `invocation` text domain. Every ability/REST route must have a real `permission_callback`.
-- **JavaScript**: built with `@wordpress/scripts`. Run `npm run lint:js`.
+- **PHP**: follows the WordPress Coding Standards, enforced by PHPCS via `phpcs.xml.dist`; target **PHP 8.1**, `declare(strict_types=1)`. Prefix functions with `invocation_`, constants with `INVOCATION_`, and use the `invocation` text domain. Every ability/REST route must have a real `permission_callback`.
+- **JavaScript**: built with `@wordpress/scripts`, linted by ESLint with the WordPress config plus wp-prettier.
+- **Editors**: `.editorconfig` is the source of truth (tabs, LF, final newline). VS Code users get matching settings from `.vscode/settings.json` and recommended extensions from `.vscode/extensions.json`.
 - **Capabilities & escaping**: validate/sanitize input, escape output, and prepare all SQL.
 
 ## Before opening a PR
 
 ```bash
 npm run build
-npm run lint:js
-find inc invocation.php -name '*.php' -exec php -l {} \;
+
+# One-time, for PHP linting (runs PHPCS in Docker — no local PHP install needed):
+npm run tools:install
+
+# JS lint + PHP syntax + PHPCS (WordPress Coding Standards).
+# Most violations are auto-fixable: npm run lint:js:fix && npm run lint:php:fix
+npm run lint
 
 # Plugin Check must pass (this is what wp.org reviewers run)
 docker compose run --rm --user 33:33 -e HOME=/tmp wpcli \

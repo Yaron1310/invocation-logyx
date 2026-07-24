@@ -8,7 +8,10 @@
 
 import { addFilter } from '@wordpress/hooks';
 import { createHigherOrderComponent } from '@wordpress/compose';
-import { BlockControls, store as blockEditorStore } from '@wordpress/block-editor';
+import {
+	BlockControls,
+	store as blockEditorStore,
+} from '@wordpress/block-editor';
 import {
 	ToolbarGroup,
 	ToolbarButton,
@@ -70,19 +73,32 @@ function RefineControl( { clientId } ) {
 			} );
 
 			if ( ! result?.blockMarkup ) {
-				throw new Error( __( 'No refined content was returned.', 'invocation' ) );
+				throw new Error(
+					__( 'No refined content was returned.', 'invocation' )
+				);
 			}
 
 			const blocks = parse( result.blockMarkup );
 			if ( ! blocks.length ) {
-				throw new Error( __( 'The refined content could not be parsed.', 'invocation' ) );
+				throw new Error(
+					__(
+						'The refined content could not be parsed.',
+						'invocation'
+					)
+				);
 			}
 
 			replaceBlocks( clientId, blocks );
 			setIsOpen( false );
 			setInstruction( '' );
 		} catch ( err ) {
-			setError( err?.message || __( 'Refine failed. Check your AI Connector.', 'invocation' ) );
+			setError(
+				err?.message ||
+					__(
+						'Refine failed. Check your AI Connector.',
+						'invocation'
+					)
+			);
 		} finally {
 			setIsLoading( false );
 		}
@@ -108,7 +124,10 @@ function RefineControl( { clientId } ) {
 				>
 					<TextareaControl
 						__nextHasNoMarginBottom
-						label={ __( 'How should this block change?', 'invocation' ) }
+						label={ __(
+							'How should this block change?',
+							'invocation'
+						) }
 						placeholder={ __(
 							'e.g. Make the heading punchier and add a short subheading.',
 							'invocation'
@@ -125,8 +144,16 @@ function RefineControl( { clientId } ) {
 						</Notice>
 					) }
 
-					<Flex justify="flex-end" gap={ 2 } style={ { marginTop: '16px' } }>
-						<Button variant="tertiary" onClick={ close } disabled={ isLoading }>
+					<Flex
+						justify="flex-end"
+						gap={ 2 }
+						style={ { marginTop: '16px' } }
+					>
+						<Button
+							variant="tertiary"
+							onClick={ close }
+							disabled={ isLoading }
+						>
 							{ __( 'Cancel', 'invocation' ) }
 						</Button>
 						<Button
@@ -164,4 +191,8 @@ const withInvocationRefine = createHigherOrderComponent( ( BlockEdit ) => {
 	};
 }, 'withInvocationRefine' );
 
-addFilter( 'editor.BlockEdit', 'invocation/refine-toolbar', withInvocationRefine );
+addFilter(
+	'editor.BlockEdit',
+	'invocation/refine-toolbar',
+	withInvocationRefine
+);

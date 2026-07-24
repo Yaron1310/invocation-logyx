@@ -193,7 +193,7 @@ function invocation_ability_save_pattern( array $input = array() ) {
 		'slug'       => (string) get_post_field( 'post_name', $id ),
 		'synced'     => $synced,
 		'categories' => $assigned,
-		'editUrl'    => (string) ( get_edit_post_link( $id, 'raw' ) ?: '' ),
+		'editUrl'    => (string) ( get_edit_post_link( $id, 'raw' ) ?? '' ),
 		'warnings'   => $normalized['warnings'],
 	);
 }

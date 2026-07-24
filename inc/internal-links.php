@@ -178,8 +178,8 @@ function invocation_repair_internal_links( string $markup, array $links ): array
 	$by_id   = array();
 
 	foreach ( $links as $link ) {
-		$url           = (string) $link['url'];
-		$valid[ $url ] = true;
+		$url                           = (string) $link['url'];
+		$valid[ $url ]                 = true;
 		$by_id[ (string) $link['id'] ] = $url;
 
 		$title_slug = sanitize_title( (string) $link['title'] );

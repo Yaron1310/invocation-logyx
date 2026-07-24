@@ -217,6 +217,9 @@ function invocation_get_user_patterns( bool $include_content = false ): array {
 		array(
 			'post_type'        => 'wp_block',
 			'post_status'      => 'publish',
+			// Deliberately high: the full set of saved patterns is grounding data for
+			// generation, and a truncated list would let the model miss real patterns.
+			// phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_numberposts
 			'numberposts'      => 200,
 			'suppress_filters' => false,
 		)
@@ -250,9 +253,14 @@ function invocation_get_user_patterns( bool $include_content = false ): array {
  * @return array<int, array<string, mixed>>
  */
 function invocation_rank_patterns( array $patterns, string $query, int $limit ): array {
+	$words = preg_split( '/\s+/', $query, -1, PREG_SPLIT_NO_EMPTY );
+	if ( ! is_array( $words ) ) {
+		$words = array();
+	}
+
 	$terms = array_values(
 		array_filter(
-			array_map( 'strtolower', preg_split( '/\s+/', $query, -1, PREG_SPLIT_NO_EMPTY ) ?: array() ),
+			array_map( 'strtolower', $words ),
 			static fn ( string $t ): bool => strlen( $t ) > 2
 		)
 	);
@@ -268,7 +276,7 @@ function invocation_rank_patterns( array $patterns, string $query, int $limit ):
 			. implode( ' ', (array) ( $pattern['categories'] ?? array() ) ) . ' '
 			. (string) ( $pattern['description'] ?? '' )
 		);
-		$score = 0;
+		$score    = 0;
 		foreach ( $terms as $term ) {
 			if ( str_contains( $haystack, $term ) ) {
 				++$score;

@@ -201,7 +201,7 @@ function invocation_ability_gather_site_context( array $input = array() ) {
 		return new WP_Error( 'invocation_no_ai_client', __( 'The WordPress AI Client is not available.', 'invocation' ) );
 	}
 
-	$max   = max( 1, min( 50, (int) ( $input['maxPages'] ?? 15 ) ) );
+	$max    = max( 1, min( 50, (int) ( $input['maxPages'] ?? 15 ) ) );
 	$corpus = invocation_build_site_corpus( $max );
 
 	$system = implode(
@@ -248,7 +248,7 @@ function invocation_ability_gather_site_context( array $input = array() ) {
 		'additionalProperties' => false,
 	);
 
-	$user_prompt = "Site name: " . get_bloginfo( 'name' ) . "\nTagline: " . get_bloginfo( 'description' ) . "\n\nContent sample:\n" . $corpus;
+	$user_prompt = 'Site name: ' . get_bloginfo( 'name' ) . "\nTagline: " . get_bloginfo( 'description' ) . "\n\nContent sample:\n" . $corpus;
 
 	$response = invocation_generate_text( $user_prompt, $system, $schema );
 	if ( is_wp_error( $response ) ) {
@@ -288,10 +288,10 @@ function invocation_build_site_corpus( int $max ): string {
 	$parts = array();
 	$total = 0;
 	foreach ( $posts as $post ) {
-		$text = wp_strip_all_tags( do_blocks( $post->post_content ) );
-		$text = trim( preg_replace( '/\s+/', ' ', $text ) );
-		$text = wp_trim_words( $text, 60, '…' );
-		$line = '- ' . get_the_title( $post ) . ': ' . $text;
+		$text   = wp_strip_all_tags( do_blocks( $post->post_content ) );
+		$text   = trim( preg_replace( '/\s+/', ' ', $text ) );
+		$text   = wp_trim_words( $text, 60, '…' );
+		$line   = '- ' . get_the_title( $post ) . ': ' . $text;
 		$total += strlen( $line );
 		if ( $total > 6000 ) {
 			break;

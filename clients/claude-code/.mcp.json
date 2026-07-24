@@ -1,12 +1,10 @@
 {
   "mcpServers": {
     "invocation": {
-      "command": "npx",
-      "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/hub.js"],
       "env": {
-        "WP_API_URL": "",
-        "WP_API_USERNAME": "",
-        "WP_API_PASSWORD": ""
+        "INVOCATION_SITES_FILE": "${INVOCATION_SITES_FILE:-}"
       }
     }
   }

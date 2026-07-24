@@ -29,21 +29,21 @@ add_action(
 				'input_schema'        => array(
 					'type'                 => 'object',
 					'properties'           => array(
-						'prompt'    => array(
+						'prompt'           => array(
 							'type'        => 'string',
 							'description' => 'What to build, in natural language (e.g. "a hero section with a heading, intro paragraph and a call-to-action button, followed by a three-column features list").',
 							'minLength'   => 1,
 						),
-						'postTitle' => array(
+						'postTitle'        => array(
 							'type'        => 'string',
 							'description' => 'Optional title of the page being authored, for additional context.',
 						),
-						'tone'      => array(
+						'tone'             => array(
 							'type'        => 'string',
 							'description' => 'Optional writing tone.',
 							'enum'        => array( 'professional', 'casual', 'creative', 'minimal', 'bold' ),
 						),
-						'audience'  => array(
+						'audience'         => array(
 							'type'        => 'string',
 							'description' => 'Optional description of the target audience.',
 						),

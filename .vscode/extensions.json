@@ -1,0 +1,9 @@
+{
+	"recommendations": [
+		"editorconfig.editorconfig",
+		"dbaeumer.vscode-eslint",
+		"esbenp.prettier-vscode",
+		"bmewburn.vscode-intelephense-client",
+		"valeryanm.vscode-phpsab"
+	]
+}

@@ -7,3 +7,12 @@ build/
 *.zip
 /.mcp.json
 .claude/
+
+# Dev-only PHP tooling (PHPCS + WPCS). Installed via `npm run tools:install`.
+# Kept separate from the plugin's own vendor/, which IS committed and shipped.
+tools/vendor/
+
+# Fleet Hub site registry — contains real Application Passwords. Belongs in
+# ~/.config/invocation/sites.json, never in the repo. (sites.example.json is
+# the committed placeholder template.)
+sites.json

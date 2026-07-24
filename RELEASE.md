@@ -4,7 +4,10 @@ This guide covers cutting a release of the Invocation WordPress plugin (and the 
 
 ## 0. What ships
 
-The distributed plugin zip contains: `invocation.php`, `readme.txt`, `inc/`, `build/`, `src/` (the compiled-JS sources, required by wp.org), `vendor/` (the bundled MCP Adapter), and `composer.json` (controlled by the `files` field in `package.json`). Dev-only files (`node_modules/`, `clients/`, `.gitignore`, `docker-compose.yml`, `README.md`, `package*.json`, `composer.lock`) are **not** shipped.
+The distributed plugin zip contains: `invocation.php`, `readme.txt`, `inc/`, `build/`, `src/` (the compiled-JS sources, required by wp.org), `vendor/` (the bundled MCP Adapter), and `composer.json` (controlled by the `files` field in `package.json`). Dev-only files (`node_modules/`, `clients/`, `tools/`, `.gitignore`, `docker-compose.yml`, `composer.lock`, `package-lock.json`) are **not** shipped.
+
+Note: `wp-scripts plugin-zip` also includes `README.md` and `package.json` regardless of the `files`
+field. Both are harmless (no secrets) and wp.org accepts them — verify with `unzip -Z1 invocation.zip`.
 
 ## 1. Bump the version (keep these three in sync)
 
@@ -29,9 +32,8 @@ npm run build               # compiles src/index.js + src/admin.js -> build/
 ## 3. Pre-flight checks
 
 ```bash
-npm run lint:js                       # JS lint
-# PHP lint (each file)
-find inc invocation.php -name '*.php' -exec php -l {} \;
+npm run tools:install   # one-time: PHPCS + WPCS into tools/vendor/ (Docker, gitignored)
+npm run lint            # ESLint + wp-prettier, php -l, and PHPCS (WordPress Coding Standards)
 ```
 
 Run **Plugin Check** against the packaged file set (this is what reviewers run). Locally via the Docker dev env:

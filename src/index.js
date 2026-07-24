@@ -8,8 +8,11 @@
  */
 
 import { registerPlugin } from '@wordpress/plugins';
-import { PluginSidebar, PluginSidebarMoreMenuItem } from '@wordpress/editor';
-import { store as editorStore } from '@wordpress/editor';
+import {
+	PluginSidebar,
+	PluginSidebarMoreMenuItem,
+	store as editorStore,
+} from '@wordpress/editor';
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import {
 	PanelBody,
@@ -87,7 +90,9 @@ function InvocationSidebar() {
 		} catch ( error ) {
 			setNotice( {
 				status: 'error',
-				message: error?.message || __( 'Could not load patterns.', 'invocation' ),
+				message:
+					error?.message ||
+					__( 'Could not load patterns.', 'invocation' ),
 			} );
 		}
 	};
@@ -137,12 +142,19 @@ function InvocationSidebar() {
 			} );
 
 			if ( ! result?.blockMarkup ) {
-				throw new Error( __( 'No layout was returned.', 'invocation' ) );
+				throw new Error(
+					__( 'No layout was returned.', 'invocation' )
+				);
 			}
 
 			const blocks = parse( result.blockMarkup );
 			if ( ! blocks.length ) {
-				throw new Error( __( 'The generated layout could not be parsed.', 'invocation' ) );
+				throw new Error(
+					__(
+						'The generated layout could not be parsed.',
+						'invocation'
+					)
+				);
 			}
 
 			insertBlocks( blocks );
@@ -157,14 +169,19 @@ function InvocationSidebar() {
 			setNotice( {
 				status: 'success',
 				message:
-					( result.summary || __( 'Layout inserted.', 'invocation' ) ) + warning,
+					( result.summary ||
+						__( 'Layout inserted.', 'invocation' ) ) + warning,
 			} );
 			setPrompt( '' );
 		} catch ( error ) {
 			setNotice( {
 				status: 'error',
 				message:
-					error?.message || __( 'Generation failed. Check your AI Connector.', 'invocation' ),
+					error?.message ||
+					__(
+						'Generation failed. Check your AI Connector.',
+						'invocation'
+					),
 			} );
 		} finally {
 			setIsLoading( false );
@@ -173,7 +190,10 @@ function InvocationSidebar() {
 
 	return (
 		<>
-			<PluginSidebarMoreMenuItem target={ SIDEBAR_NAME } icon={ INVOCATION_ICON }>
+			<PluginSidebarMoreMenuItem
+				target={ SIDEBAR_NAME }
+				icon={ INVOCATION_ICON }
+			>
 				{ __( 'Invocation', 'invocation' ) }
 			</PluginSidebarMoreMenuItem>
 			<PluginSidebar
@@ -204,8 +224,13 @@ function InvocationSidebar() {
 							label={ __( 'Pattern to fill', 'invocation' ) }
 							value={ patternName }
 							options={ patterns }
-							onChange={ ( value ) => setPatternName( value || '' ) }
-							placeholder={ __( 'Search patterns…', 'invocation' ) }
+							onChange={ ( value ) =>
+								setPatternName( value || '' )
+							}
+							placeholder={ __(
+								'Search patterns…',
+								'invocation'
+							) }
 						/>
 					) }
 
@@ -213,13 +238,22 @@ function InvocationSidebar() {
 						__nextHasNoMarginBottom
 						label={
 							isFill
-								? __( 'Content to put into the pattern', 'invocation' )
+								? __(
+										'Content to put into the pattern',
+										'invocation'
+								  )
 								: __( 'What should we build?', 'invocation' )
 						}
 						placeholder={
 							isFill
-								? __( 'e.g. Promote a free 14-day trial of our app.', 'invocation' )
-								: __( 'e.g. A hero with a heading and CTA button, then a three-column features section.', 'invocation' )
+								? __(
+										'e.g. Promote a free 14-day trial of our app.',
+										'invocation'
+								  )
+								: __(
+										'e.g. A hero with a heading and CTA button, then a three-column features section.',
+										'invocation'
+								  )
 						}
 						value={ prompt }
 						onChange={ setPrompt }

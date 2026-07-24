@@ -1,0 +1,17 @@
+{
+  "blog": {
+    "url": "https://blog.example.com",
+    "user": "your-wp-username",
+    "appPassword": "xxxx xxxx xxxx xxxx xxxx xxxx"
+  },
+  "client-shop": {
+    "url": "https://shop.client.com",
+    "user": "agency-bot",
+    "appPassword": "xxxx xxxx xxxx xxxx xxxx xxxx"
+  },
+  "local-dev": {
+    "url": "http://mysite.local/?rest_route=/invocation/mcp",
+    "user": "admin",
+    "appPassword": "xxxx xxxx xxxx xxxx xxxx xxxx"
+  }
+}

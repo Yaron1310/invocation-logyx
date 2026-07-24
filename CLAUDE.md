@@ -14,12 +14,21 @@ The repo directory is `blocksmith-plugin` but the plugin was rebranded to **Invo
 npm install
 npm run build          # compile src/ -> build/ (wp-scripts, entrypoints: src/index.js, src/admin.js)
 npm start              # watch mode
-npm run lint:js        # ESLint over src/
+npm run lint:js        # ESLint (+ wp-prettier) over src/
+npm run lint:js:fix    # auto-fix JS
 npm run plugin-zip     # produce distributable zip
 
-# PHP lint before a PR
-find inc invocation.php -name '*.php' -exec php -l {} \;
+# PHP: PHPCS with the WordPress Coding Standards, run through Docker (no local PHP needed).
+npm run tools:install  # one-time: install PHPCS + WPCS into tools/vendor (gitignored)
+npm run lint:php       # PHPCS against phpcs.xml.dist
+npm run lint:php:fix   # phpcbf auto-fix
+
+npm run lint           # everything: JS + PHP syntax + PHPCS
 ```
+
+PHP tooling lives in `tools/composer.json` with its own gitignored `tools/vendor/`, deliberately
+separate from the plugin's committed-and-shipped `vendor/`. Never add dev dependencies to the root
+`composer.json` — that tree ships to wp.org.
 
 Local WordPress env (Docker: WP + MariaDB + WP-CLI, plugin bind-mounted so PHP edits are live):
 
@@ -30,7 +39,7 @@ docker compose run --rm wpcli wp plugin activate invocation
 docker compose run --rm --user 33:33 -e HOME=/tmp wpcli wp plugin check invocation
 ```
 
-There is **no PHP test suite**. Verification is: `php -l`, `wp plugin check`, and a manual editor smoke test (generate a section, refine a block). `build/` is gitignored but *is* shipped in the plugin zip — rebuild after JS changes.
+There is **no PHP test suite**. Verification is: `npm run lint` (ESLint + `php -l` + PHPCS), `wp plugin check`, and a manual editor smoke test (generate a section, refine a block). `build/` is gitignored but *is* shipped in the plugin zip — rebuild after JS changes.
 
 ## Architecture
 

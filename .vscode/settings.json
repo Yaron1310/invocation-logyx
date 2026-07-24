@@ -1,0 +1,53 @@
+{
+	// Invocation follows the WordPress Coding Standards: tabs everywhere, LF endings.
+	// .editorconfig is the source of truth; these settings make VS Code apply the
+	// same rules through the ESLint / Prettier / PHPCS extensions.
+	"editor.insertSpaces": false,
+	"editor.detectIndentation": false,
+	"files.eol": "\n",
+	"files.trimTrailingWhitespace": true,
+	"files.insertFinalNewline": true,
+
+	// JavaScript: ESLint (with the WordPress config) owns formatting on save.
+	// wp-prettier is wired in through .prettierrc.js, so ESLint --fix applies it.
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": "explicit"
+	},
+	"eslint.validate": [ "javascript", "javascriptreact" ],
+	"eslint.workingDirectories": [ { "mode": "auto" } ],
+
+	// Prettier is applied via ESLint, not as a standalone formatter, to avoid the
+	// two fighting over the same file.
+	"prettier.requireConfig": true,
+	"javascript.format.enable": false,
+
+	// PHP: validate against the plugin's minimum supported version.
+	"php.validate.enable": true,
+	"[php]": {
+		"editor.defaultFormatter": null,
+		"editor.formatOnSave": false
+	},
+
+	// PHPCS extension (wongjn.php-sniffer or shevaua.phpcs) picks up phpcs.xml.dist.
+	"phpsab.snifferMode": "onType",
+	"phpsab.standard": "phpcs.xml.dist",
+
+	"files.associations": {
+		"*.php": "php",
+		"readme.txt": "plaintext"
+	},
+
+	// Noise reduction: generated + vendored trees.
+	"search.exclude": {
+		"**/node_modules": true,
+		"**/build": true,
+		"**/vendor": true,
+		"**/tools/vendor": true
+	},
+	"files.watcherExclude": {
+		"**/node_modules/**": true,
+		"**/build/**": true,
+		"**/vendor/**": true,
+		"**/tools/vendor/**": true
+	}
+}

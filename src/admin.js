@@ -10,7 +10,6 @@ import {
 	Card,
 	CardBody,
 	CardHeader,
-	__experimentalHeading as Heading,
 	TextareaControl,
 	FormTokenField,
 	Button,
@@ -44,9 +43,14 @@ function SiteBriefApp() {
 	useEffect( () => {
 		apiFetch( { path: '/wp/v2/settings' } )
 			.then( ( settings ) => {
-				setBrief( { ...DEFAULT_BRIEF, ...( settings[ OPTION ] || {} ) } );
+				setBrief( {
+					...DEFAULT_BRIEF,
+					...( settings[ OPTION ] || {} ),
+				} );
 			} )
-			.catch( ( e ) => setNotice( { status: 'error', message: e.message } ) )
+			.catch( ( e ) =>
+				setNotice( { status: 'error', message: e.message } )
+			)
 			.finally( () => setIsLoading( false ) );
 	}, [] );
 
@@ -62,7 +66,10 @@ function SiteBriefApp() {
 				method: 'POST',
 				data: { [ OPTION ]: brief },
 			} );
-			setNotice( { status: 'success', message: __( 'Site Brief saved.', 'invocation' ) } );
+			setNotice( {
+				status: 'success',
+				message: __( 'Site Brief saved.', 'invocation' ),
+			} );
 		} catch ( e ) {
 			setNotice( { status: 'error', message: e.message } );
 		} finally {
@@ -82,12 +89,20 @@ function SiteBriefApp() {
 			setBrief( { ...DEFAULT_BRIEF, ...result } );
 			setNotice( {
 				status: 'success',
-				message: __( 'Generated from your site and saved. Review and edit as needed.', 'invocation' ),
+				message: __(
+					'Generated from your site and saved. Review and edit as needed.',
+					'invocation'
+				),
 			} );
 		} catch ( e ) {
 			setNotice( {
 				status: 'error',
-				message: e.message || __( 'Generation failed. Check your AI Connector.', 'invocation' ),
+				message:
+					e.message ||
+					__(
+						'Generation failed. Check your AI Connector.',
+						'invocation'
+					),
 			} );
 		} finally {
 			setIsGenerating( false );
@@ -96,7 +111,11 @@ function SiteBriefApp() {
 
 	if ( isLoading ) {
 		return (
-			<Flex justify="flex-start" gap={ 2 } style={ { padding: '24px 0' } }>
+			<Flex
+				justify="flex-start"
+				gap={ 2 }
+				style={ { padding: '24px 0' } }
+			>
 				<Spinner />
 				{ __( 'Loading…', 'invocation' ) }
 			</Flex>
@@ -105,12 +124,22 @@ function SiteBriefApp() {
 
 	return (
 		<div style={ { maxWidth: '760px' } }>
-			<Flex justify="space-between" align="center" style={ { margin: '16px 0' } }>
+			<Flex
+				justify="space-between"
+				align="center"
+				style={ { margin: '16px 0' } }
+			>
 				<FlexItem>
-					<Heading level={ 1 }>{ __( 'Invocation — Site Brief', 'invocation' ) }</Heading>
+					<h1 style={ { margin: 0 } }>
+						{ __( 'Invocation — Site Brief', 'invocation' ) }
+					</h1>
 				</FlexItem>
 				<FlexItem>
-					<Button variant="secondary" onClick={ generate } disabled={ isGenerating || isSaving }>
+					<Button
+						variant="secondary"
+						onClick={ generate }
+						disabled={ isGenerating || isSaving }
+					>
 						{ isGenerating ? (
 							<Flex gap={ 2 } justify="center">
 								<Spinner />
@@ -131,14 +160,19 @@ function SiteBriefApp() {
 			</p>
 
 			{ notice && (
-				<Notice status={ notice.status } onRemove={ () => setNotice( null ) }>
+				<Notice
+					status={ notice.status }
+					onRemove={ () => setNotice( null ) }
+				>
 					{ notice.message }
 				</Notice>
 			) }
 
 			<Card>
 				<CardHeader>
-					<Heading level={ 3 }>{ __( 'Brand', 'invocation' ) }</Heading>
+					<h3 style={ { margin: 0 } }>
+						{ __( 'Brand', 'invocation' ) }
+					</h3>
 				</CardHeader>
 				<CardBody>
 					<TextareaControl
@@ -168,12 +202,17 @@ function SiteBriefApp() {
 
 			<Card style={ { marginTop: '16px' } }>
 				<CardHeader>
-					<Heading level={ 3 }>{ __( 'Content guidance', 'invocation' ) }</Heading>
+					<h3 style={ { margin: 0 } }>
+						{ __( 'Content guidance', 'invocation' ) }
+					</h3>
 				</CardHeader>
 				<CardBody>
 					<FormTokenField
 						__nextHasNoMarginBottom
-						label={ __( 'Offerings (products, services, topics)', 'invocation' ) }
+						label={ __(
+							'Offerings (products, services, topics)',
+							'invocation'
+						) }
 						value={ brief.offerings }
 						onChange={ ( v ) => update( 'offerings', v ) }
 					/>
@@ -193,14 +232,21 @@ function SiteBriefApp() {
 			</Card>
 
 			<Flex justify="flex-start" style={ { marginTop: '16px' } }>
-				<Button variant="primary" onClick={ save } disabled={ isSaving || isGenerating }>
-					{ isSaving ? __( 'Saving…', 'invocation' ) : __( 'Save changes', 'invocation' ) }
+				<Button
+					variant="primary"
+					onClick={ save }
+					disabled={ isSaving || isGenerating }
+				>
+					{ isSaving
+						? __( 'Saving…', 'invocation' )
+						: __( 'Save changes', 'invocation' ) }
 				</Button>
 			</Flex>
 
 			{ brief.generatedAt && (
 				<p style={ { color: '#757575', marginTop: '12px' } }>
-					{ __( 'Last generated:', 'invocation' ) } { brief.generatedAt }
+					{ __( 'Last generated:', 'invocation' ) }{ ' ' }
+					{ brief.generatedAt }
 				</p>
 			) }
 		</div>

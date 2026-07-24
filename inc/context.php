@@ -67,14 +67,24 @@ function invocation_context_providers(): array {
 		'media'    => array(
 			'enabled' => static fn ( array $input ): bool => ( ! array_key_exists( 'useMedia', $input ) || (bool) $input['useMedia'] ) && current_user_can( 'upload_files' ),
 			'gather'  => static fn ( array $args ) => function_exists( 'invocation_ability_search_media' )
-				? invocation_ability_search_media( array( 'query' => $args['query'], 'limit' => 8 ) )['items']
+				? invocation_ability_search_media(
+					array(
+						'query' => $args['query'],
+						'limit' => 8,
+					)
+				)['items']
 				: array(),
 			'render'  => 'invocation_render_media_context',
 		),
 		'links'    => array(
 			'enabled' => static fn ( array $input ): bool => ! array_key_exists( 'useInternalLinks', $input ) || (bool) $input['useInternalLinks'],
 			'gather'  => static fn ( array $args ) => function_exists( 'invocation_ability_search_internal_links' )
-				? invocation_ability_search_internal_links( array( 'query' => '', 'limit' => 15 ) )['items']
+				? invocation_ability_search_internal_links(
+					array(
+						'query' => '',
+						'limit' => 15,
+					)
+				)['items']
 				: array(),
 			'render'  => 'invocation_render_links_context',
 		),
@@ -278,14 +288,39 @@ function invocation_render_blocks_context( $blocks, array $input ): array {
 	// actually registered, in case a site has disabled some). Custom blocks, which
 	// the model can't know, are always listed in full.
 	$preferred_core = array(
-		'core/group', 'core/columns', 'core/column', 'core/cover', 'core/media-text',
-		'core/heading', 'core/paragraph', 'core/list', 'core/list-item', 'core/quote', 'core/pullquote',
-		'core/image', 'core/gallery', 'core/buttons', 'core/button', 'core/separator', 'core/spacer',
-		'core/details', 'core/table', 'core/video', 'core/audio', 'core/embed',
-		'core/social-links', 'core/social-link', 'core/search', 'core/code', 'core/html',
-		'core/site-logo', 'core/navigation', 'core/more', 'core/nextpage',
+		'core/group',
+		'core/columns',
+		'core/column',
+		'core/cover',
+		'core/media-text',
+		'core/heading',
+		'core/paragraph',
+		'core/list',
+		'core/list-item',
+		'core/quote',
+		'core/pullquote',
+		'core/image',
+		'core/gallery',
+		'core/buttons',
+		'core/button',
+		'core/separator',
+		'core/spacer',
+		'core/details',
+		'core/table',
+		'core/video',
+		'core/audio',
+		'core/embed',
+		'core/social-links',
+		'core/social-link',
+		'core/search',
+		'core/code',
+		'core/html',
+		'core/site-logo',
+		'core/navigation',
+		'core/more',
+		'core/nextpage',
 	);
-	$preferred = array_values( array_filter( $preferred_core, static fn ( string $n ): bool => isset( $registered_core[ $n ] ) ) );
+	$preferred      = array_values( array_filter( $preferred_core, static fn ( string $n ): bool => isset( $registered_core[ $n ] ) ) );
 
 	$lines = array( 'Blocks — use only blocks registered on this site; do not invent block types.' );
 	if ( $custom ) {
@@ -312,9 +347,9 @@ function invocation_render_patterns_context( $patterns, array $input ): array {
 
 	$lines = array( 'Available section patterns — these are designed, reusable sections for this site. PREFER composing the layout from patterns that fit the request, adapting their structure and filling them with relevant content:' );
 	foreach ( $patterns as $pattern ) {
-		$title = '' !== (string) ( $pattern['title'] ?? '' ) ? (string) $pattern['title'] : (string) ( $pattern['name'] ?? '' );
-		$cats  = ! empty( $pattern['categories'] ) ? ' [' . implode( ', ', (array) $pattern['categories'] ) . ']' : '';
-		$used  = ! empty( $pattern['blocks'] ) ? ' — blocks: ' . implode( ', ', (array) $pattern['blocks'] ) : '';
+		$title   = '' !== (string) ( $pattern['title'] ?? '' ) ? (string) $pattern['title'] : (string) ( $pattern['name'] ?? '' );
+		$cats    = ! empty( $pattern['categories'] ) ? ' [' . implode( ', ', (array) $pattern['categories'] ) . ']' : '';
+		$used    = ! empty( $pattern['blocks'] ) ? ' — blocks: ' . implode( ', ', (array) $pattern['blocks'] ) : '';
 		$lines[] = sprintf( '- %s%s%s', $title, $cats, $used );
 	}
 	return $lines;

@@ -83,19 +83,19 @@ add_action(
 				'input_schema'        => array(
 					'type'                 => 'object',
 					'properties'           => array(
-						'id'      => array(
+						'id'       => array(
 							'type'        => 'integer',
 							'description' => 'The id of the page/post to update.',
 						),
-						'title'   => array(
+						'title'    => array(
 							'type'        => 'string',
 							'description' => 'New title (omit to leave unchanged).',
 						),
-						'content' => array(
+						'content'  => array(
 							'type'        => 'string',
 							'description' => 'New Gutenberg block markup (omit to leave unchanged).',
 						),
-						'status'  => array(
+						'status'   => array(
 							'type'        => 'string',
 							'description' => 'New status (omit to leave unchanged). Status change to publish/private is ignored if the user cannot publish.',
 							'enum'        => INVOCATION_PAGE_STATUSES,
@@ -159,7 +159,7 @@ function invocation_page_response( int $id ): array {
 		'status'   => (string) get_post_status( $id ),
 		'template' => (string) get_post_meta( $id, '_wp_page_template', true ),
 		'url'      => (string) get_permalink( $id ),
-		'editUrl'  => (string) ( get_edit_post_link( $id, 'raw' ) ?: '' ),
+		'editUrl'  => (string) ( get_edit_post_link( $id, 'raw' ) ?? '' ),
 	);
 }
 
@@ -243,8 +243,8 @@ function invocation_ability_update_page( array $input = array() ) {
 		$data['post_content'] = (string) $input['content'];
 	}
 	if ( array_key_exists( 'status', $input ) && in_array( (string) $input['status'], INVOCATION_PAGE_STATUSES, true ) ) {
-		$status = (string) $input['status'];
-		$type   = get_post_type_object( $post->post_type );
+		$status  = (string) $input['status'];
+		$type    = get_post_type_object( $post->post_type );
 		$blocked = in_array( $status, array( 'publish', 'private' ), true ) && $type && ! current_user_can( $type->cap->publish_posts );
 		if ( ! $blocked ) {
 			$data['post_status'] = $status;

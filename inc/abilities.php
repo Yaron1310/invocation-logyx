@@ -55,7 +55,7 @@ add_action(
 				'output_schema'       => array(
 					'type'       => 'object',
 					'properties' => array(
-						'colors'     => array(
+						'colors'       => array(
 							'type'        => 'array',
 							'description' => 'Theme color palette.',
 							'items'       => array(
@@ -78,7 +78,7 @@ add_action(
 								),
 							),
 						),
-						'layout'     => array(
+						'layout'       => array(
 							'type'        => 'object',
 							'description' => 'Content and wide layout sizes.',
 							'properties'  => array(

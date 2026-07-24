@@ -16,7 +16,14 @@
   "scripts": {
     "build": "wp-scripts build src/index.js src/admin.js",
     "start": "wp-scripts start src/index.js src/admin.js",
-    "lint:js": "wp-scripts lint-js src",
+    "lint:js": "wp-scripts lint-js src clients/claude-code/hub.js",
+    "lint:js:fix": "wp-scripts lint-js src clients/claude-code/hub.js --fix",
+    "format": "wp-scripts format src",
+    "tools:install": "docker run --rm -v \"$PWD\":/app -w /app/tools composer:2 install --no-interaction",
+    "lint:php": "docker run --rm -v \"$PWD\":/app -w /app php:8.1-cli php tools/vendor/bin/phpcs",
+    "lint:php:fix": "docker run --rm -v \"$PWD\":/app -w /app php:8.1-cli php tools/vendor/bin/phpcbf",
+    "lint:php:syntax": "docker run --rm -v \"$PWD\":/app -w /app php:8.1-cli sh -c 'find inc invocation.php -name \"*.php\" -exec php -l {} \\;'",
+    "lint": "npm run lint:js && npm run lint:php:syntax && npm run lint:php",
     "plugin-zip": "wp-scripts plugin-zip"
   },
   "devDependencies": {

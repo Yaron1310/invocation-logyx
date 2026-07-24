@@ -1,0 +1,23 @@
+{
+	"root": true,
+	"extends": [ "plugin:@wordpress/eslint-plugin/recommended" ],
+	"env": {
+		"browser": true
+	},
+	"overrides": [
+		{
+			// The Claude Code client (hub.js) is a zero-dependency Node CommonJS
+			// stdio server, not browser/editor code.
+			"files": [ "clients/**/*.js" ],
+			"env": {
+				"browser": false,
+				"node": true,
+				"es2022": true
+			},
+			"parserOptions": {
+				"sourceType": "script",
+				"ecmaVersion": 2022
+			}
+		}
+	]
+}
