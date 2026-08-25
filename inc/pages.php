@@ -124,6 +124,49 @@ add_action(
 				),
 			)
 		);
+
+		wp_register_ability(
+			'invocation/duplicate-page',
+			array(
+				'label'               => __( 'Duplicate Page', 'invocation' ),
+				'description'         => __( 'Clones an existing page or post (content, template, and featured image) into a new draft, optionally with a new title. Use this before editing a page so the original is untouched while the copy is refined and reviewed.', 'invocation' ),
+				'category'            => INVOCATION_ABILITY_CATEGORY,
+				'input_schema'        => array(
+					'type'                 => 'object',
+					'properties'           => array(
+						'id'    => array(
+							'type'        => 'integer',
+							'description' => 'The id of the page/post to duplicate.',
+						),
+						'title' => array(
+							'type'        => 'string',
+							'description' => 'Title for the new copy. Defaults to the original title with " (Copy)" appended.',
+						),
+					),
+					'required'             => array( 'id' ),
+					'additionalProperties' => false,
+				),
+				'output_schema'       => invocation_page_output_schema(),
+				'execute_callback'    => 'invocation_ability_duplicate_page',
+				'permission_callback' => static function ( array $input = array() ): bool {
+					$id   = (int) ( $input['id'] ?? 0 );
+					$post = $id ? get_post( $id ) : null;
+					if ( ! $post || ! current_user_can( 'edit_post', $id ) ) {
+						return false;
+					}
+					$type = get_post_type_object( $post->post_type );
+					return $type ? current_user_can( $type->cap->create_posts ?? $type->cap->edit_posts ) : false;
+				},
+				'meta'                => array(
+					'show_in_rest' => true,
+					'annotations'  => array(
+						'readonly'    => false,
+						'destructive' => false,
+						'idempotent'  => false,
+					),
+				),
+			)
+		);
 	}
 );
 
@@ -277,4 +320,54 @@ function invocation_ability_update_page( array $input = array() ) {
 	}
 
 	return invocation_page_response( $id );
+}
+
+/**
+ * Execute callback for invocation/duplicate-page.
+ *
+ * @param array<string, mixed> $input Validated input.
+ * @return array<string, mixed>|WP_Error
+ */
+function invocation_ability_duplicate_page( array $input = array() ) {
+	$source_id = (int) ( $input['id'] ?? 0 );
+	$source    = $source_id ? get_post( $source_id ) : null;
+	if ( ! $source ) {
+		return new WP_Error( 'invocation_not_found', __( 'Post not found.', 'invocation' ) );
+	}
+
+	$title = trim( (string) ( $input['title'] ?? '' ) );
+	if ( '' === $title ) {
+		/* translators: %s: original page title. */
+		$title = sprintf( __( '%s (Copy)', 'invocation' ), $source->post_title );
+	}
+
+	// Always land as a draft; the caller reviews and publishes explicitly.
+	$new_id = wp_insert_post(
+		array(
+			'post_title'   => $title,
+			'post_content' => $source->post_content,
+			'post_excerpt' => $source->post_excerpt,
+			'post_status'  => 'draft',
+			'post_type'    => $source->post_type,
+			'post_parent'  => $source->post_parent,
+			'menu_order'   => $source->menu_order,
+		),
+		true
+	);
+
+	if ( is_wp_error( $new_id ) ) {
+		return $new_id;
+	}
+
+	$template = get_post_meta( $source_id, '_wp_page_template', true );
+	if ( $template ) {
+		update_post_meta( (int) $new_id, '_wp_page_template', $template );
+	}
+
+	$thumbnail_id = get_post_thumbnail_id( $source_id );
+	if ( $thumbnail_id ) {
+		set_post_thumbnail( (int) $new_id, $thumbnail_id );
+	}
+
+	return invocation_page_response( (int) $new_id );
 }

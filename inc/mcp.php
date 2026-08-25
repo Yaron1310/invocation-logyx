@@ -33,6 +33,7 @@ function invocation_mcp_abilities(): array {
 		'invocation/gather-site-context',
 		'invocation/create-page',
 		'invocation/update-page',
+		'invocation/duplicate-page',
 		'invocation/save-pattern',
 		'invocation/list-templates',
 	);
