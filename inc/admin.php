@@ -104,6 +104,7 @@ add_action(
  */
 function invocation_admin_tabs(): array {
 	return array(
+		'chat'    => __( 'Chat', 'invocation' ),
 		'brief'   => __( 'Site Brief', 'invocation' ),
 		'connect' => __( 'Connect', 'invocation' ),
 		'setup'   => __( 'Setup', 'invocation' ),
@@ -143,6 +144,9 @@ function invocation_render_admin_page(): void {
 
 		<?php
 		switch ( $current ) {
+			case 'chat':
+				invocation_render_chat_tab();
+				break;
 			case 'connect':
 				invocation_render_connect_tab();
 				break;
@@ -165,6 +169,17 @@ function invocation_render_brief_tab(): void {
 	?>
 	<div class="invocation-panel">
 		<div id="invocation-admin-root"></div>
+	</div>
+	<?php
+}
+
+/**
+ * Chat tab — mount point for the built-in chat assistant.
+ */
+function invocation_render_chat_tab(): void {
+	?>
+	<div class="invocation-panel">
+		<div id="invocation-chat-root"></div>
 	</div>
 	<?php
 }

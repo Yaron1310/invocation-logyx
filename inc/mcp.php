@@ -27,6 +27,7 @@ function invocation_mcp_abilities(): array {
 		'invocation/refine-block',
 		'invocation/list-patterns',
 		'invocation/search-media',
+		'invocation/upload-media',
 		'invocation/search-internal-links',
 		'invocation/get-theme-context',
 		'invocation/list-blocks',

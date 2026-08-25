@@ -5,7 +5,7 @@
  * the site's own content via the gather-site-context ability.
  */
 
-import { createRoot, useState, useEffect } from '@wordpress/element';
+import { createRoot, useState, useEffect, useRef } from '@wordpress/element';
 import {
 	Card,
 	CardBody,
@@ -242,9 +242,312 @@ function SiteBriefApp() {
 	);
 }
 
+/**
+ * Read a File as a base64 data: URL.
+ *
+ * @param {File} file The file to read.
+ * @return {Promise<string>} Resolves with the data: URL.
+ */
+function readFileAsDataUrl( file ) {
+	return new Promise( ( resolve, reject ) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve( reader.result );
+		reader.onerror = () => reject( reader.error );
+		reader.readAsDataURL( file );
+	} );
+}
+
+/**
+ * Run one ability over the Abilities REST endpoint.
+ *
+ * @param {string} ability Ability id, e.g. "invocation/chat".
+ * @param {Object} input   Ability input.
+ * @return {Promise<Object>} The ability's output.
+ */
+function runAbility( ability, input ) {
+	return apiFetch( {
+		path: `/wp-abilities/v1/abilities/${ ability }/run`,
+		method: 'POST',
+		data: { input },
+	} );
+}
+
+/**
+ * Invocation admin app — a chat assistant that proposes ability calls and
+ * only runs them once the user approves, so nothing is created, changed, or
+ * published without an explicit click.
+ */
+function ChatApp() {
+	const [ messages, setMessages ] = useState( [] );
+	const [ input, setInput ] = useState( '' );
+	const [ attachment, setAttachment ] = useState( null );
+	const [ pendingAction, setPendingAction ] = useState( null );
+	const [ isBusy, setIsBusy ] = useState( false );
+	const [ error, setError ] = useState( null );
+	const fileInputRef = useRef( null );
+	const logRef = useRef( null );
+
+	useEffect( () => {
+		if ( logRef.current ) {
+			logRef.current.scrollTop = logRef.current.scrollHeight;
+		}
+	}, [ messages, pendingAction ] );
+
+	const toHistory = ( list ) =>
+		list
+			.filter( ( m ) => m.role !== 'attachment' )
+			.map( ( m ) => ( { role: m.role, content: m.content } ) );
+
+	const ask = async ( messageText, priorMessages ) => {
+		setIsBusy( true );
+		setError( null );
+		try {
+			const result = await runAbility( 'invocation/chat', {
+				message: messageText,
+				history: toHistory( priorMessages ),
+			} );
+			setMessages( ( prev ) => [
+				...prev,
+				{ role: 'assistant', content: result.reply },
+			] );
+			setPendingAction( result.action || null );
+		} catch ( e ) {
+			setError(
+				e.message || __( 'Something went wrong.', 'invocation' )
+			);
+		} finally {
+			setIsBusy( false );
+		}
+	};
+
+	const handleSend = async () => {
+		const trimmed = input.trim();
+		if ( ! trimmed && ! attachment ) {
+			return;
+		}
+
+		let userMessage = trimmed;
+		let nextMessages = messages;
+
+		if ( attachment ) {
+			setIsBusy( true );
+			setError( null );
+			try {
+				const dataUrl = await readFileAsDataUrl( attachment.file );
+				const uploaded = await runAbility( 'invocation/upload-media', {
+					data: dataUrl,
+					filename: attachment.file.name,
+				} );
+				nextMessages = [
+					...messages,
+					{
+						role: 'tool',
+						content: `Uploaded attachment: ATTACHMENT_ID=${ uploaded.id } ATTACHMENT_URL=${ uploaded.url }`,
+						attachmentUrl: uploaded.url,
+					},
+				];
+				userMessage =
+					( trimmed || __( 'I attached an image.', 'invocation' ) ) +
+					`\n(ATTACHMENT_ID: ${ uploaded.id }, ATTACHMENT_URL: ${ uploaded.url })`;
+			} catch ( e ) {
+				setIsBusy( false );
+				setError(
+					e.message ||
+						__( 'The image could not be uploaded.', 'invocation' )
+				);
+				return;
+			}
+		}
+
+		nextMessages = [
+			...nextMessages,
+			{
+				role: 'user',
+				content: trimmed || __( '(sent an image)', 'invocation' ),
+			},
+		];
+		setMessages( nextMessages );
+		setInput( '' );
+		setAttachment( null );
+		if ( fileInputRef.current ) {
+			fileInputRef.current.value = '';
+		}
+
+		await ask( userMessage, nextMessages );
+	};
+
+	const handleRunAction = async () => {
+		if ( ! pendingAction ) {
+			return;
+		}
+		setIsBusy( true );
+		setError( null );
+		const action = pendingAction;
+		setPendingAction( null );
+		try {
+			const result = await runAbility( action.ability, action.input );
+			const toolMessage = {
+				role: 'tool',
+				content: `${ action.ability } -> ${ JSON.stringify( result ) }`,
+			};
+			const nextMessages = [ ...messages, toolMessage ];
+			setMessages( nextMessages );
+			await ask(
+				`TOOL_RESULT for ${ action.ability }: ${ JSON.stringify(
+					result
+				) }`,
+				nextMessages
+			);
+		} catch ( e ) {
+			setError( e.message || __( 'The action failed.', 'invocation' ) );
+		} finally {
+			setIsBusy( false );
+		}
+	};
+
+	return (
+		<div className="invocation-chat">
+			<p className="invocation-intro">
+				{ __(
+					'Ask for a page, an edit, or an image. Nothing is created, changed, or published until you approve the proposed action below.',
+					'invocation'
+				) }
+			</p>
+
+			{ error && (
+				<Notice
+					status="error"
+					isDismissible
+					onDismiss={ () => setError( null ) }
+				>
+					{ error }
+				</Notice>
+			) }
+
+			<div className="invocation-chat__log" ref={ logRef }>
+				{ messages.map( ( m, i ) => (
+					<div
+						key={ i }
+						className={ `invocation-chat__message invocation-chat__message--${ m.role }` }
+					>
+						{ m.content }
+						{ m.attachmentUrl && (
+							<img
+								className="invocation-chat__attachment"
+								src={ m.attachmentUrl }
+								alt=""
+							/>
+						) }
+					</div>
+				) ) }
+
+				{ pendingAction && (
+					<div className="invocation-chat__action">
+						<strong>
+							{ __( 'Proposed action:', 'invocation' ) }{ ' ' }
+							{ pendingAction.ability }
+						</strong>
+						<pre>
+							{ JSON.stringify( pendingAction.input, null, 2 ) }
+						</pre>
+						<Flex gap={ 2 }>
+							<Button
+								variant="primary"
+								isBusy={ isBusy }
+								disabled={ isBusy }
+								onClick={ handleRunAction }
+							>
+								{ __( 'Approve & run', 'invocation' ) }
+							</Button>
+							<Button
+								variant="tertiary"
+								disabled={ isBusy }
+								onClick={ () => setPendingAction( null ) }
+							>
+								{ __( 'Dismiss', 'invocation' ) }
+							</Button>
+						</Flex>
+					</div>
+				) }
+
+				{ isBusy && ! pendingAction && <Spinner /> }
+			</div>
+
+			{ attachment && (
+				<div className="invocation-chat__preview">
+					<img src={ attachment.previewUrl } alt="" />
+					<span>{ attachment.file.name }</span>
+					<Button
+						variant="tertiary"
+						size="small"
+						onClick={ () => setAttachment( null ) }
+					>
+						{ __( 'Remove', 'invocation' ) }
+					</Button>
+				</div>
+			) }
+
+			<div className="invocation-chat__composer">
+				<input
+					ref={ fileInputRef }
+					type="file"
+					accept="image/png,image/jpeg,image/gif,image/webp"
+					style={ { display: 'none' } }
+					onChange={ ( e ) => {
+						const file = e.target.files && e.target.files[ 0 ];
+						if ( file ) {
+							setAttachment( {
+								file,
+								previewUrl: URL.createObjectURL( file ),
+							} );
+						}
+					} }
+				/>
+				<Button
+					variant="secondary"
+					disabled={ isBusy }
+					onClick={ () => fileInputRef.current?.click() }
+				>
+					{ __( 'Attach image', 'invocation' ) }
+				</Button>
+				<TextareaControl
+					__nextHasNoMarginBottom
+					hideLabelFromVision
+					label={ __( 'Message', 'invocation' ) }
+					value={ input }
+					onChange={ setInput }
+					onKeyDown={ ( e ) => {
+						if ( e.key === 'Enter' && ! e.shiftKey ) {
+							e.preventDefault();
+							handleSend();
+						}
+					} }
+					placeholder={ __(
+						'e.g. Duplicate the About page as a draft, change the header to…',
+						'invocation'
+					) }
+				/>
+				<Button
+					variant="primary"
+					disabled={ isBusy || ( ! input.trim() && ! attachment ) }
+					isBusy={ isBusy }
+					onClick={ handleSend }
+				>
+					{ __( 'Send', 'invocation' ) }
+				</Button>
+			</div>
+		</div>
+	);
+}
+
 const root = document.getElementById( 'invocation-admin-root' );
 if ( root ) {
 	createRoot( root ).render( <SiteBriefApp /> );
+}
+
+const chatRoot = document.getElementById( 'invocation-chat-root' );
+if ( chatRoot ) {
+	createRoot( chatRoot ).render( <ChatApp /> );
 }
 
 // Select-all on click for the readonly snippet field in the Connect panel.

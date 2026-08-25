@@ -88,6 +88,8 @@ function invocation_bootstrap(): void {
 	require_once INVOCATION_DIR . 'inc/templates.php';
 	require_once INVOCATION_DIR . 'inc/save-pattern.php';
 	require_once INVOCATION_DIR . 'inc/site-brief.php';
+	require_once INVOCATION_DIR . 'inc/upload-media.php';
+	require_once INVOCATION_DIR . 'inc/chat.php';
 	require_once INVOCATION_DIR . 'inc/mcp.php';
 	require_once INVOCATION_DIR . 'inc/admin.php';
 	require_once INVOCATION_DIR . 'inc/editor.php';
