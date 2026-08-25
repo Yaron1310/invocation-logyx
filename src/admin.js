@@ -16,6 +16,7 @@ import {
 	Notice,
 	Spinner,
 	Flex,
+	SearchControl,
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
@@ -284,14 +285,55 @@ function ChatApp() {
 	const [ pendingAction, setPendingAction ] = useState( null );
 	const [ isBusy, setIsBusy ] = useState( false );
 	const [ error, setError ] = useState( null );
+	const [ isPagePickerOpen, setIsPagePickerOpen ] = useState( false );
+	const [ pageQuery, setPageQuery ] = useState( '' );
+	const [ pageResults, setPageResults ] = useState( [] );
+	const [ isPageSearching, setIsPageSearching ] = useState( false );
 	const fileInputRef = useRef( null );
 	const logRef = useRef( null );
+	const textareaRef = useRef( null );
 
 	useEffect( () => {
 		if ( logRef.current ) {
 			logRef.current.scrollTop = logRef.current.scrollHeight;
 		}
 	}, [ messages, pendingAction ] );
+
+	const searchPages = async ( query ) => {
+		setIsPageSearching( true );
+		try {
+			const result = await runAbility( 'invocation/search-pages', {
+				query,
+				limit: 20,
+			} );
+			setPageResults( result.items || [] );
+		} catch ( e ) {
+			setError(
+				e.message || __( 'Could not load pages.', 'invocation' )
+			);
+		} finally {
+			setIsPageSearching( false );
+		}
+	};
+
+	const openPagePicker = () => {
+		setIsPagePickerOpen( ( wasOpen ) => {
+			const nowOpen = ! wasOpen;
+			if ( nowOpen ) {
+				searchPages( pageQuery );
+			}
+			return nowOpen;
+		} );
+	};
+
+	const handlePickPage = ( page ) => {
+		const reference = `the page "${ page.title }" (id ${ page.id }, status: ${ page.status })`;
+		setInput( ( prev ) =>
+			prev ? `${ prev } ${ reference }` : reference
+		);
+		setIsPagePickerOpen( false );
+		textareaRef.current?.focus();
+	};
 
 	const toHistory = ( list ) =>
 		list
@@ -487,6 +529,51 @@ function ChatApp() {
 				</div>
 			) }
 
+			{ isPagePickerOpen && (
+				<div className="invocation-chat__page-picker">
+					<SearchControl
+						__nextHasNoMarginBottom
+						label={ __( 'Search pages', 'invocation' ) }
+						placeholder={ __(
+							'Search by page title…',
+							'invocation'
+						) }
+						value={ pageQuery }
+						onChange={ ( value ) => {
+							setPageQuery( value );
+							searchPages( value );
+						} }
+					/>
+					{ isPageSearching ? (
+						<Spinner />
+					) : (
+						<ul className="invocation-chat__page-list">
+							{ pageResults.length === 0 && (
+								<li className="invocation-chat__page-empty">
+									{ __( 'No pages found.', 'invocation' ) }
+								</li>
+							) }
+							{ pageResults.map( ( page ) => (
+								<li key={ page.id }>
+									<button
+										type="button"
+										className="invocation-chat__page-item"
+										onClick={ () => handlePickPage( page ) }
+									>
+										<span className="invocation-chat__page-title">
+											{ page.title }
+										</span>
+										<span className="invocation-chat__page-status">
+											{ page.status }
+										</span>
+									</button>
+								</li>
+							) ) }
+						</ul>
+					) }
+				</div>
+			) }
+
 			<div className="invocation-chat__composer">
 				<input
 					ref={ fileInputRef }
@@ -506,11 +593,20 @@ function ChatApp() {
 				<Button
 					variant="secondary"
 					disabled={ isBusy }
+					isPressed={ isPagePickerOpen }
+					onClick={ openPagePicker }
+				>
+					{ __( 'Browse pages', 'invocation' ) }
+				</Button>
+				<Button
+					variant="secondary"
+					disabled={ isBusy }
 					onClick={ () => fileInputRef.current?.click() }
 				>
 					{ __( 'Attach image', 'invocation' ) }
 				</Button>
 				<TextareaControl
+					ref={ textareaRef }
 					__nextHasNoMarginBottom
 					hideLabelFromVision
 					label={ __( 'Message', 'invocation' ) }

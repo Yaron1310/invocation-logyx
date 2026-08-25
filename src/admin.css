@@ -311,3 +311,61 @@
 	object-fit: cover;
 	border-radius: 3px;
 }
+
+.invocation-chat__page-picker {
+	margin-bottom: 8px;
+	padding: 10px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.invocation-chat__page-list {
+	max-height: 220px;
+	margin: 8px 0 0;
+	padding: 0;
+	overflow-y: auto;
+	list-style: none;
+}
+
+.invocation-chat__page-empty {
+	padding: 8px 4px;
+	color: #50575e;
+	font-size: 13px;
+}
+
+.invocation-chat__page-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	width: 100%;
+	padding: 8px;
+	background: none;
+	border: 0;
+	border-radius: 3px;
+	font-size: 13px;
+	text-align: left;
+	cursor: pointer;
+}
+
+.invocation-chat__page-item:hover,
+.invocation-chat__page-item:focus {
+	background: #f0f0f1;
+}
+
+.invocation-chat__page-title {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.invocation-chat__page-status {
+	flex-shrink: 0;
+	padding: 1px 8px;
+	background: #f0f0f1;
+	border-radius: 10px;
+	color: #50575e;
+	font-size: 11px;
+	text-transform: uppercase;
+}
