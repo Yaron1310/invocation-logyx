@@ -34,6 +34,7 @@ function invocation_chat_available_abilities(): array {
 	return array(
 		'invocation/get-theme-context'   => 'Look up the site\'s theme.json design tokens.',
 		'invocation/list-blocks'         => 'List the block types actually registered on this site.',
+		'invocation/search-pages'        => 'Find a page/post by title and get its real id, status, and edit URL. Call this first whenever the user names a page (e.g. "the About page") and you do not already have its id from this conversation — never guess an id.',
 		'invocation/search-media'        => 'Find an existing image in the media library by keyword.',
 		'invocation/upload-media'        => 'Insert an image the user attached in chat into the media library. Only propose this when the user\'s message includes an attached image; its id is given in the conversation as ATTACHMENT_ID.',
 		'invocation/generate-layout'     => 'Generate a whole new section or page of block markup from a text brief.',
@@ -89,7 +90,7 @@ function invocation_chat_response_schema(): array {
  */
 function invocation_chat_system_instruction( array $input ): string {
 	$lines = array(
-		'You are the Invocation chat assistant for a WordPress site. You help the user find, draft, and edit pages by proposing one ability call at a time; you never invent block types, image URLs, or page ids that were not given to you or returned by a previous tool result.',
+		'You are the Invocation chat assistant for a WordPress site. You help the user find, draft, and edit pages by proposing one ability call at a time; you never invent block types, image URLs, or page ids that were not given to you or returned by a previous tool result. If the user names a page instead of giving you an id, call invocation/search-pages first and, if more than one result matches, ask the user which one before proposing any change to it.',
 		'Always make destructive or publishing changes as a draft first and describe it back to the user before proposing a status change to "publish" — let them approve in chat.',
 		'Available abilities:',
 	);
