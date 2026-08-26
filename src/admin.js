@@ -34,35 +34,64 @@ const INVOCATION_ID_ONLY_ABILITIES = [
 	'invocation/duplicate-page',
 ];
 
+// Abilities that take an id among other fields. Combined with
+// INVOCATION_ID_ONLY_ABILITIES below to decide which calls get the selected
+// page's id filled in when the model's own proposal is missing one.
+const INVOCATION_ABILITIES_WITH_ID = [
+	...INVOCATION_ID_ONLY_ABILITIES,
+	'invocation/update-page',
+];
+
 /**
- * Coerce a proposed action's input into the shape its ability expects, for
- * the narrow, known case of an id-only ability handed a bare id.
+ * Coerce a proposed action's input into the shape its ability expects.
  *
- * @param {string} ability Ability id.
- * @param {*}      input   The model's proposed input.
+ * The "input" field the model fills in has no per-ability schema to
+ * constrain it, so it is unreliable in two distinct ways this repairs:
+ * (1) a single-field object flattened to its bare value (get-page's
+ * {"id": 123} -> plain 123); (2) an id silently dropped from the object
+ * altogether, even when the model clearly knew which page was meant (it can
+ * name the page in its reply while still omitting the id from the JSON).
+ * For (2), fall back to the page id the user actually selected in the UI —
+ * ground truth the client already has, rather than trusting the model to
+ * transcribe it a second time.
+ *
+ * @param {string}      ability        Ability id.
+ * @param {*}           input          The model's proposed input.
+ * @param {number|null} selectedPageId The id of the page selected in the picker, if any.
  * @return {Object} A plain object safe to send as `input`.
  */
-function normalizeActionInput( ability, input ) {
+function normalizeActionInput( ability, input, selectedPageId ) {
 	const isPlainObject =
 		input !== null && typeof input === 'object' && ! Array.isArray( input );
+
+	let result;
 	if ( isPlainObject ) {
-		return input;
-	}
-	// Only coerce a genuine bare id (a number, or a numeric string) — never
-	// null/undefined/"" into a fabricated id, since Number(null) is 0 and a
-	// silently wrong id is worse than the ability's own clear "missing id"
-	// error.
-	if ( INVOCATION_ID_ONLY_ABILITIES.includes( ability ) ) {
+		result = { ...input };
+	} else if ( INVOCATION_ID_ONLY_ABILITIES.includes( ability ) ) {
+		// Only coerce a genuine bare id (a number, or a numeric string) —
+		// never null/undefined/"" into a fabricated id, since Number(null)
+		// is 0 and a silently wrong id is worse than the ability's own
+		// clear "missing id" error.
 		const asNumber = Number( input );
-		if (
+		result =
 			( typeof input === 'number' || typeof input === 'string' ) &&
 			'' !== input &&
 			! Number.isNaN( asNumber )
-		) {
-			return { id: asNumber };
-		}
+				? { id: asNumber }
+				: {};
+	} else {
+		result = {};
 	}
-	return {};
+
+	if (
+		INVOCATION_ABILITIES_WITH_ID.includes( ability ) &&
+		selectedPageId &&
+		! ( Number( result.id ) > 0 )
+	) {
+		result.id = selectedPageId;
+	}
+
+	return result;
 }
 
 // Abilities marked readonly are exposed as GET, not POST — core reads
@@ -428,7 +457,8 @@ function ChatApp() {
 							...result.action,
 							input: normalizeActionInput(
 								result.action.ability,
-								result.action.input
+								result.action.input,
+								selectedPage?.id
 							),
 					  }
 					: null
