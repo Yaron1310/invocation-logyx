@@ -196,7 +196,18 @@ add_action(
 				'meta'                => array(
 					'show_in_rest' => true,
 					'annotations'  => array(
-						'readonly'    => true,
+						// Not marked readonly even though it never writes to
+						// WordPress: the Abilities REST API forces readonly
+						// abilities onto GET, and this ability's payload
+						// (conversation history, which can include a whole
+						// page's fetched content) is unbounded — cramming
+						// that into a URL query string can exceed a host's
+						// URL-length or WAF rules (observed: a hosting
+						// firewall intercepting the request as abuse before
+						// it reaches WordPress at all, well upstream of any
+						// PHP or CORS behavior this plugin controls). POST
+						// keeps the payload in the request body instead.
+						'readonly'    => false,
 						'destructive' => false,
 						'idempotent'  => false,
 					),

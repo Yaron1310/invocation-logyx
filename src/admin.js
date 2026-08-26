@@ -100,8 +100,13 @@ function normalizeActionInput( ability, input, selectedPageId ) {
 // propose (create/update/duplicate-page, refine-block, generate-layout,
 // upload-media, save-pattern, ...) is POST as usual; this is just the set
 // the Chat tab itself calls read-only abilities for.
+// invocation/chat is deliberately NOT in this list even though it never
+// writes to WordPress: its payload (conversation history, which can include
+// a whole page's fetched content) is unbounded, and GET would cram that
+// into a URL query string — risking URL-length limits or a host's WAF
+// treating a large, HTML-laden query string as suspicious. It is registered
+// server-side as a non-readonly (POST) ability specifically for this.
 const INVOCATION_READONLY_ABILITIES = [
-	'invocation/chat',
 	'invocation/search-pages',
 	'invocation/get-page',
 	'invocation/search-media',
