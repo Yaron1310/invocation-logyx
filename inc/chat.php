@@ -47,36 +47,75 @@ function invocation_chat_available_abilities(): array {
 }
 
 /**
- * JSON schema for one chat turn's structured response.
+ * JSON schema for one chat turn's structured response, as returned by the
+ * invocation/chat ability (its public output_schema): a reply plus at most
+ * one proposed action, or null if this turn is just a reply.
  *
  * @return array<string, mixed>
  */
 function invocation_chat_response_schema(): array {
 	return array(
+		'type'       => 'object',
+		'properties' => array(
+			'reply'  => array(
+				'type'        => 'string',
+				'description' => 'What to say to the user this turn.',
+			),
+			'action' => array(
+				'type'       => array( 'object', 'null' ),
+				'properties' => array(
+					'ability' => array( 'type' => 'string' ),
+					'input'   => array( 'type' => 'object' ),
+				),
+			),
+		),
+	);
+}
+
+/**
+ * JSON schema actually sent to the AI provider for one chat turn.
+ *
+ * Deliberately narrower than invocation_chat_response_schema(): some
+ * providers' structured-output support (Gemini included) compiles the
+ * schema to a strict proto-based format that rejects a "type" union like
+ * ["object", "null"] ("Proto field is not repeating, cannot start list").
+ * So `action` here is always an object — the model sets `hasAction: false`
+ * and an empty ability/input to mean "no action" instead of using null —
+ * and the execute callback below translates that back into the nullable
+ * shape the ability actually promises its own callers.
+ *
+ * @return array<string, mixed>
+ */
+function invocation_chat_model_schema(): array {
+	return array(
 		'type'                 => 'object',
 		'properties'           => array(
-			'reply'  => array(
+			'reply'     => array(
 				'type'        => 'string',
 				'description' => 'What to say to the user this turn: a question, an explanation, or a summary of what you are about to do.',
 			),
-			'action' => array(
-				'type'                 => array( 'object', 'null' ),
-				'description'          => 'At most one ability call to propose this turn, or null to just reply. Wait for the tool result (given back to you as the next turn) before proposing another action.',
+			'hasAction' => array(
+				'type'        => 'boolean',
+				'description' => 'True if you are proposing exactly one ability call this turn; false if you are only replying. Wait for the tool result (given back to you as the next turn) before proposing another action.',
+			),
+			'action'    => array(
+				'type'                 => 'object',
+				'description'          => 'The proposed ability call. Ignored unless hasAction is true — when hasAction is false, set ability to "" and input to {}.',
 				'properties'           => array(
 					'ability' => array(
 						'type' => 'string',
-						'enum' => array_keys( invocation_chat_available_abilities() ),
+						'enum' => array_merge( array_keys( invocation_chat_available_abilities() ), array( '' ) ),
 					),
 					'input'   => array(
 						'type'        => 'object',
-						'description' => 'The input object for that ability, matching its own input schema.',
+						'description' => 'The input object for that ability, matching its own input schema. {} when hasAction is false.',
 					),
 				),
 				'required'             => array( 'ability', 'input' ),
 				'additionalProperties' => false,
 			),
 		),
-		'required'             => array( 'reply', 'action' ),
+		'required'             => array( 'reply', 'hasAction', 'action' ),
 		'additionalProperties' => false,
 	);
 }
@@ -188,7 +227,7 @@ function invocation_ability_chat( array $input = array() ) {
 	$transcript[] = 'USER: ' . $message;
 
 	$system = invocation_chat_system_instruction( $input );
-	$raw    = invocation_generate_text( implode( "\n", $transcript ), $system, invocation_chat_response_schema() );
+	$raw    = invocation_generate_text( implode( "\n", $transcript ), $system, invocation_chat_model_schema() );
 
 	if ( is_wp_error( $raw ) ) {
 		return $raw;
@@ -199,10 +238,16 @@ function invocation_ability_chat( array $input = array() ) {
 		return new WP_Error( 'invocation_chat_bad_response', __( 'The AI provider returned an unexpected response.', 'invocation' ) );
 	}
 
-	$action = $decoded['action'] ?? null;
-	if ( is_array( $action ) && ( ! isset( $action['ability'] ) || ! array_key_exists( $action['ability'], invocation_chat_available_abilities() ) ) ) {
-		// Refuse to hand the client an action it can't or shouldn't call.
-		$action = null;
+	$action   = null;
+	$proposed = is_array( $decoded['action'] ?? null ) ? $decoded['action'] : array();
+	$ability  = (string) ( $proposed['ability'] ?? '' );
+	if ( ! empty( $decoded['hasAction'] ) && '' !== $ability && array_key_exists( $ability, invocation_chat_available_abilities() ) ) {
+		// Only trust a well-formed, allow-listed proposal — anything else
+		// (hasAction false, an empty/unknown ability) means "just reply".
+		$action = array(
+			'ability' => $ability,
+			'input'   => is_array( $proposed['input'] ?? null ) ? $proposed['input'] : array(),
+		);
 	}
 
 	return array(

@@ -315,6 +315,7 @@ function ChatApp() {
 	const [ pageQuery, setPageQuery ] = useState( '' );
 	const [ pageResults, setPageResults ] = useState( [] );
 	const [ isPageSearching, setIsPageSearching ] = useState( false );
+	const [ selectedPage, setSelectedPage ] = useState( null );
 	const fileInputRef = useRef( null );
 	const logRef = useRef( null );
 	const textareaRef = useRef( null );
@@ -353,10 +354,10 @@ function ChatApp() {
 	};
 
 	const handlePickPage = ( page ) => {
-		const reference = `the page "${ page.title }" (id ${ page.id }, status: ${ page.status })`;
-		setInput( ( prev ) =>
-			prev ? `${ prev } ${ reference }` : reference
-		);
+		// Kept out of the message text on purpose: this becomes the `pageId`
+		// sent alongside every turn, not something the user has to type or
+		// the model has to parse back out of prose.
+		setSelectedPage( page );
 		setIsPagePickerOpen( false );
 		textareaRef.current?.focus();
 	};
@@ -373,6 +374,7 @@ function ChatApp() {
 			const result = await runAbility( 'invocation/chat', {
 				message: messageText,
 				history: toHistory( priorMessages ),
+				...( selectedPage ? { pageId: selectedPage.id } : {} ),
 			} );
 			setMessages( ( prev ) => [
 				...prev,
@@ -540,6 +542,25 @@ function ChatApp() {
 
 				{ isBusy && ! pendingAction && <Spinner /> }
 			</div>
+
+			{ selectedPage && (
+				<div className="invocation-chat__preview">
+					<span>
+						{ __( 'Editing:', 'invocation' ) }{ ' ' }
+						{ selectedPage.title }{ ' ' }
+						<span className="invocation-chat__page-status">
+							{ selectedPage.status }
+						</span>
+					</span>
+					<Button
+						variant="tertiary"
+						size="small"
+						onClick={ () => setSelectedPage( null ) }
+					>
+						{ __( 'Clear', 'invocation' ) }
+					</Button>
+				</div>
+			) }
 
 			{ attachment && (
 				<div className="invocation-chat__preview">
