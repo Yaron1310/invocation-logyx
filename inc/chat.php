@@ -140,7 +140,11 @@ function invocation_chat_system_instruction( array $input ): string {
 
 	$page_id = (int) ( $input['pageId'] ?? 0 );
 	if ( $page_id > 0 ) {
-		$lines[] = sprintf( 'The user currently has post id %d open ("%s").', $page_id, get_the_title( $page_id ) );
+		$lines[] = sprintf(
+			'SELECTED_PAGE_ID = %1$d (title "%2$s"). Whenever the user is referring to this page — including a bare instruction like "change the header" with no page named — use exactly %1$d as the id for get-page/refine-block/update-page/duplicate-page. Never use 0 and never invent a different id.',
+			$page_id,
+			get_the_title( $page_id )
+		);
 	}
 
 	return implode( "\n", $lines );

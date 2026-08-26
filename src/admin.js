@@ -45,10 +45,24 @@ const INVOCATION_ID_ONLY_ABILITIES = [
 function normalizeActionInput( ability, input ) {
 	const isPlainObject =
 		input !== null && typeof input === 'object' && ! Array.isArray( input );
-	if ( ! isPlainObject && INVOCATION_ID_ONLY_ABILITIES.includes( ability ) ) {
-		return { id: Number( input ) };
+	if ( isPlainObject ) {
+		return input;
 	}
-	return isPlainObject ? input : {};
+	// Only coerce a genuine bare id (a number, or a numeric string) — never
+	// null/undefined/"" into a fabricated id, since Number(null) is 0 and a
+	// silently wrong id is worse than the ability's own clear "missing id"
+	// error.
+	if ( INVOCATION_ID_ONLY_ABILITIES.includes( ability ) ) {
+		const asNumber = Number( input );
+		if (
+			( typeof input === 'number' || typeof input === 'string' ) &&
+			'' !== input &&
+			! Number.isNaN( asNumber )
+		) {
+			return { id: asNumber };
+		}
+	}
+	return {};
 }
 
 // Abilities marked readonly are exposed as GET, not POST — core reads
