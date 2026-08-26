@@ -69,6 +69,10 @@ function invocation_chat_response_schema(): array {
 					'input'   => array( 'type' => 'object' ),
 				),
 			),
+			'debug'  => array(
+				'type'        => 'object',
+				'description' => 'What was actually sent to and received from the AI provider this turn, for the Chat tab\'s debug panel.',
+			),
 		),
 	);
 }
@@ -241,16 +245,33 @@ function invocation_ability_chat( array $input = array() ) {
 	}
 	$transcript[] = 'USER: ' . $message;
 
-	$system = invocation_chat_system_instruction( $input );
-	$raw    = invocation_generate_text( implode( "\n", $transcript ), $system, invocation_chat_model_schema() );
+	$user_prompt = implode( "\n", $transcript );
+	$system      = invocation_chat_system_instruction( $input );
+	$raw         = invocation_generate_text( $user_prompt, $system, invocation_chat_model_schema() );
+
+	// Exposed to the client's debug panel either way, so "what did the model
+	// actually see and say" is inspectable without server log access.
+	$debug = array(
+		'systemInstruction' => $system,
+		'userPrompt'        => $user_prompt,
+		'rawResponse'       => is_wp_error( $raw ) ? null : (string) $raw,
+	);
 
 	if ( is_wp_error( $raw ) ) {
+		$raw->add_data( array_merge( (array) $raw->get_error_data(), array( 'debug' => $debug ) ) );
 		return $raw;
 	}
 
 	$decoded = json_decode( (string) $raw, true );
 	if ( ! is_array( $decoded ) || ! isset( $decoded['reply'] ) ) {
-		return new WP_Error( 'invocation_chat_bad_response', __( 'The AI provider returned an unexpected response.', 'invocation' ), array( 'status' => 502 ) );
+		return new WP_Error(
+			'invocation_chat_bad_response',
+			__( 'The AI provider returned an unexpected response.', 'invocation' ),
+			array(
+				'status' => 502,
+				'debug'  => $debug,
+			)
+		);
 	}
 
 	$action   = null;
@@ -266,5 +287,6 @@ function invocation_ability_chat( array $input = array() ) {
 	return array(
 		'reply'  => (string) $decoded['reply'],
 		'action' => $action,
+		'debug'  => $debug,
 	);
 }

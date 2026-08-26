@@ -20,7 +20,7 @@ import {
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 
 import './admin.css';
 
@@ -392,6 +392,8 @@ function ChatApp() {
 	const [ pageResults, setPageResults ] = useState( [] );
 	const [ isPageSearching, setIsPageSearching ] = useState( false );
 	const [ selectedPage, setSelectedPage ] = useState( null );
+	const [ debugLog, setDebugLog ] = useState( [] );
+	const [ isDebugOpen, setIsDebugOpen ] = useState( false );
 	const fileInputRef = useRef( null );
 	const logRef = useRef( null );
 	const textareaRef = useRef( null );
@@ -402,10 +404,41 @@ function ChatApp() {
 		}
 	}, [ messages, pendingAction ] );
 
+	// Every ability call the Chat tab makes goes through here instead of
+	// runAbility() directly, so the debug panel below can show exactly what
+	// was sent and what came back (or failed), including — for
+	// invocation/chat — the model's exact system instruction and raw
+	// response, carried in result.debug / e.data.debug.
+	const callAbility = async ( ability, request ) => {
+		const entry = { time: new Date().toISOString(), ability, request };
+		try {
+			const result = await runAbility( ability, request );
+			setDebugLog( ( prev ) =>
+				[ ...prev, { ...entry, response: result } ].slice( -50 )
+			);
+			return result;
+		} catch ( e ) {
+			setDebugLog( ( prev ) =>
+				[
+					...prev,
+					{
+						...entry,
+						error: {
+							message: e.message,
+							code: e.code,
+							data: e.data,
+						},
+					},
+				].slice( -50 )
+			);
+			throw e;
+		}
+	};
+
 	const searchPages = async ( query ) => {
 		setIsPageSearching( true );
 		try {
-			const result = await runAbility( 'invocation/search-pages', {
+			const result = await callAbility( 'invocation/search-pages', {
 				query,
 				limit: 20,
 			} );
@@ -447,7 +480,7 @@ function ChatApp() {
 		setIsBusy( true );
 		setError( null );
 		try {
-			const result = await runAbility( 'invocation/chat', {
+			const result = await callAbility( 'invocation/chat', {
 				message: messageText,
 				history: toHistory( priorMessages ),
 				...( selectedPage ? { pageId: selectedPage.id } : {} ),
@@ -491,7 +524,7 @@ function ChatApp() {
 			setError( null );
 			try {
 				const dataUrl = await readFileAsDataUrl( attachment.file );
-				const uploaded = await runAbility( 'invocation/upload-media', {
+				const uploaded = await callAbility( 'invocation/upload-media', {
 					data: dataUrl,
 					filename: attachment.file.name,
 				} );
@@ -542,7 +575,7 @@ function ChatApp() {
 		const action = pendingAction;
 		setPendingAction( null );
 		try {
-			const result = await runAbility( action.ability, action.input );
+			const result = await callAbility( action.ability, action.input );
 			const toolMessage = {
 				role: 'tool',
 				content: `${ action.ability } -> ${ JSON.stringify( result ) }`,
@@ -765,6 +798,111 @@ function ChatApp() {
 				>
 					{ __( 'Send', 'invocation' ) }
 				</Button>
+			</div>
+
+			<div className="invocation-chat__debug">
+				<button
+					type="button"
+					className="invocation-chat__debug-toggle"
+					onClick={ () => setIsDebugOpen( ( open ) => ! open ) }
+				>
+					{ isDebugOpen ? '▾' : '▸' }{ ' ' }
+					{ sprintf(
+						/* translators: %d: number of logged ability calls. */
+						__( 'Debug: %d calls', 'invocation' ),
+						debugLog.length
+					) }
+					{ debugLog.length > 0 && (
+						<span
+							role="button"
+							tabIndex={ 0 }
+							className="invocation-chat__debug-clear"
+							onClick={ ( e ) => {
+								e.stopPropagation();
+								setDebugLog( [] );
+							} }
+							onKeyDown={ ( e ) => {
+								if ( e.key === 'Enter' ) {
+									e.stopPropagation();
+									setDebugLog( [] );
+								}
+							} }
+						>
+							{ __( 'Clear', 'invocation' ) }
+						</span>
+					) }
+				</button>
+
+				{ isDebugOpen && (
+					<div className="invocation-chat__debug-log">
+						{ debugLog.length === 0 && (
+							<p className="invocation-chat__debug-empty">
+								{ __(
+									'No ability calls logged yet this session.',
+									'invocation'
+								) }
+							</p>
+						) }
+						{ [ ...debugLog ].reverse().map( ( entry, i ) => (
+							<details
+								key={ debugLog.length - i }
+								className="invocation-chat__debug-entry"
+							>
+								<summary>
+									<code>{ entry.ability }</code>{ ' ' }
+									{ entry.error && (
+										<span className="invocation-chat__debug-status invocation-chat__debug-status--error">
+											{ entry.error.code || 'error' }
+										</span>
+									) }
+									<span className="invocation-chat__debug-time">
+										{ entry.time }
+									</span>
+								</summary>
+								<div className="invocation-chat__debug-block">
+									<strong>
+										{ __( 'Request', 'invocation' ) }
+									</strong>
+									<pre>
+										{ JSON.stringify(
+											entry.request,
+											null,
+											2
+										) }
+									</pre>
+								</div>
+								{ entry.response && (
+									<div className="invocation-chat__debug-block">
+										<strong>
+											{ __( 'Response', 'invocation' ) }
+										</strong>
+										<pre>
+											{ JSON.stringify(
+												entry.response,
+												null,
+												2
+											) }
+										</pre>
+									</div>
+								) }
+								{ entry.error && (
+									<div className="invocation-chat__debug-block">
+										<strong>
+											{ __( 'Error', 'invocation' ) }
+										</strong>
+										<pre>
+											{ JSON.stringify(
+												entry.error,
+												null,
+												2
+											) }
+										</pre>
+									</div>
+								) }
+							</details>
+						) ) }
+					</div>
+				) }
 			</div>
 		</div>
 	);

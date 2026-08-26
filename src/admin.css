@@ -369,3 +369,101 @@
 	font-size: 11px;
 	text-transform: uppercase;
 }
+
+/* Debug panel: raw request/response for every ability call the Chat tab made. */
+.invocation-chat__debug {
+	margin-top: var(--invocation-gap);
+	border-top: 1px solid #dcdcde;
+	padding-top: var(--invocation-gap);
+}
+
+.invocation-chat__debug-toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 4px 0;
+	background: none;
+	border: 0;
+	color: #50575e;
+	font-size: 12px;
+	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+}
+
+.invocation-chat__debug-clear {
+	margin-left: auto;
+	color: #3858e9;
+	font-weight: 400;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.invocation-chat__debug-log {
+	max-height: 400px;
+	margin-top: 8px;
+	overflow-y: auto;
+}
+
+.invocation-chat__debug-empty {
+	margin: 0;
+	color: #50575e;
+	font-size: 12px;
+}
+
+.invocation-chat__debug-entry {
+	margin-bottom: 6px;
+	padding: 8px 10px;
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	font-size: 12px;
+}
+
+.invocation-chat__debug-entry summary {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+}
+
+.invocation-chat__debug-status--error {
+	padding: 1px 6px;
+	background: #f8d7da;
+	border-radius: 10px;
+	color: #842029;
+	font-size: 11px;
+}
+
+.invocation-chat__debug-time {
+	margin-left: auto;
+	color: #8c8f94;
+	font-size: 11px;
+}
+
+.invocation-chat__debug-block {
+	margin-top: 8px;
+}
+
+.invocation-chat__debug-block strong {
+	display: block;
+	margin-bottom: 2px;
+	font-size: 11px;
+	text-transform: uppercase;
+	color: #8c8f94;
+}
+
+.invocation-chat__debug-block pre {
+	max-height: 240px;
+	margin: 0;
+	padding: 6px 8px;
+	overflow: auto;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+	font-family: Menlo, Consolas, monaco, monospace;
+	font-size: 11px;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
