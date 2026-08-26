@@ -76,7 +76,7 @@ function invocation_ability_get_page( array $input = array() ) {
 	$id   = (int) ( $input['id'] ?? 0 );
 	$post = $id ? get_post( $id ) : null;
 	if ( ! $post ) {
-		return new WP_Error( 'invocation_not_found', __( 'Post not found.', 'invocation' ) );
+		return new WP_Error( 'invocation_not_found', __( 'Post not found.', 'invocation' ), array( 'status' => 404 ) );
 	}
 
 	return array(

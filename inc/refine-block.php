@@ -105,10 +105,10 @@ function invocation_ability_refine_block( array $input = array() ) {
 	$instruction = trim( (string) ( $input['instruction'] ?? '' ) );
 
 	if ( '' === $markup ) {
-		return new WP_Error( 'invocation_missing_markup', __( 'Block markup is required.', 'invocation' ) );
+		return new WP_Error( 'invocation_missing_markup', __( 'Block markup is required.', 'invocation' ), array( 'status' => 400 ) );
 	}
 	if ( '' === $instruction ) {
-		return new WP_Error( 'invocation_missing_instruction', __( 'An instruction is required.', 'invocation' ) );
+		return new WP_Error( 'invocation_missing_instruction', __( 'An instruction is required.', 'invocation' ), array( 'status' => 400 ) );
 	}
 	if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
 		return new WP_Error( 'invocation_no_ai_client', __( 'The WordPress AI Client is not available.', 'invocation' ) );
@@ -145,7 +145,7 @@ function invocation_ability_refine_block( array $input = array() ) {
 
 	$data = json_decode( (string) $response, true );
 	if ( ! is_array( $data ) || empty( $data['blockMarkup'] ) ) {
-		return new WP_Error( 'invocation_invalid_response', __( 'The AI response did not contain usable block markup.', 'invocation' ) );
+		return new WP_Error( 'invocation_invalid_response', __( 'The AI response did not contain usable block markup.', 'invocation' ), array( 'status' => 502 ) );
 	}
 
 	$final = invocation_finalize_markup( (string) $data['blockMarkup'], $ctx );

@@ -98,7 +98,7 @@ function invocation_ability_upload_media( array $input = array() ) {
 	$mime     = (string) ( $input['mimeType'] ?? '' );
 
 	if ( '' === $raw || '' === $filename ) {
-		return new WP_Error( 'invocation_missing_data', __( 'Both image data and a filename are required.', 'invocation' ) );
+		return new WP_Error( 'invocation_missing_data', __( 'Both image data and a filename are required.', 'invocation' ), array( 'status' => 400 ) );
 	}
 
 	// Strip a data: URL prefix if the caller sent one whole, e.g. from a
@@ -116,18 +116,18 @@ function invocation_ability_upload_media( array $input = array() ) {
 	}
 
 	if ( ! isset( INVOCATION_UPLOAD_MEDIA_MIME_TYPES[ $mime ] ) ) {
-		return new WP_Error( 'invocation_unsupported_type', __( 'Only JPEG, PNG, GIF, and WebP images are supported.', 'invocation' ) );
+		return new WP_Error( 'invocation_unsupported_type', __( 'Only JPEG, PNG, GIF, and WebP images are supported.', 'invocation' ), array( 'status' => 400 ) );
 	}
 
 	$decoded = base64_decode( $raw, true );
 	if ( false === $decoded || '' === $decoded ) {
-		return new WP_Error( 'invocation_invalid_data', __( 'Image data could not be decoded; expected base64.', 'invocation' ) );
+		return new WP_Error( 'invocation_invalid_data', __( 'Image data could not be decoded; expected base64.', 'invocation' ), array( 'status' => 400 ) );
 	}
 
 	// Cap at WordPress's own upload size limit rather than trusting the client.
 	$max_bytes = wp_max_upload_size();
 	if ( $max_bytes > 0 && strlen( $decoded ) > $max_bytes ) {
-		return new WP_Error( 'invocation_too_large', __( 'Image exceeds the maximum upload size for this site.', 'invocation' ) );
+		return new WP_Error( 'invocation_too_large', __( 'Image exceeds the maximum upload size for this site.', 'invocation' ), array( 'status' => 413 ) );
 	}
 
 	require_once ABSPATH . 'wp-admin/includes/file.php';

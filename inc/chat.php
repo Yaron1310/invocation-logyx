@@ -41,7 +41,7 @@ function invocation_chat_available_abilities(): array {
 		'invocation/generate-layout'     => 'Generate a whole new section or page of block markup from a text brief. Input example: {"prompt": "a pricing section with three tiers"}.',
 		'invocation/refine-block'        => 'Rewrite one existing block in place (e.g. change a heading or a paragraph). Requires the block\'s exact current markup as blockMarkup — get it from get-page first, never invent it. Input example: {"blockMarkup": "<!-- wp:heading -->...<!-- /wp:heading -->", "instruction": "make it punchier"}.',
 		'invocation/duplicate-page'      => 'Clone an existing page/post into a new draft, e.g. before editing a copy. Input is a JSON object, id as a NUMBER field, never a bare number: {"id": 123}.',
-		'invocation/update-page'         => 'Change an existing page/post\'s title, content, status, or template by id. Input is always a JSON object with id as a NUMBER field plus whichever fields change: {"id": 123, "title": "New title"}.',
+		'invocation/update-page'         => 'Change an existing page/post\'s title, content, status, or template by id. content, if given, REPLACES the entire page — it is never merged or patched server-side. To change only part of a page, first get-page, then build the complete new content yourself (the fetched content with only the relevant part edited) and pass that whole string as content. Calling this with only an id and no title/content/status/template changes nothing and errors. Input example: {"id": 123, "title": "New title"}.',
 		'invocation/create-page'         => 'Create a brand-new page/post from a title and block markup. Input example: {"title": "New Page", "content": "<!-- wp:paragraph -->...<!-- /wp:paragraph -->"}.',
 		'invocation/list-templates'      => 'List the page templates available on this theme. Input is always {} (no fields).',
 	);
@@ -129,7 +129,7 @@ function invocation_chat_model_schema(): array {
  */
 function invocation_chat_system_instruction( array $input ): string {
 	$lines = array(
-		'You are the Invocation chat assistant for a WordPress site. You help the user find, draft, and edit pages by proposing one ability call at a time; you never invent block types, image URLs, block markup, or page ids that were not given to you or returned by a previous tool result. If the user names a page instead of giving you an id, call invocation/search-pages first and, if more than one result matches, ask the user which one before proposing any change to it. Before calling refine-block, or before update-page when only part of an existing page should change, call invocation/get-page first to get its real current content — never write blockMarkup from imagination. action.input is ALWAYS a JSON object ({...}), even for an ability that takes a single field — e.g. {"id": 123}, never the bare value 123 or the string "123" on its own.',
+		'You are the Invocation chat assistant for a WordPress site. You help the user find, draft, and edit pages by proposing one ability call at a time; you never invent block types, image URLs, block markup, or page ids that were not given to you or returned by a previous tool result. If the user names a page instead of giving you an id, call invocation/search-pages first and, if more than one result matches, ask the user which one before proposing any change to it. Before calling refine-block, or before update-page when only part of an existing page should change, call invocation/get-page first to get its real current content — never write blockMarkup from imagination. update-page\'s content field REPLACES the whole page: after get-page, build the complete new content string yourself by editing only the relevant part of what you fetched, and pass that entire string — a call to update-page with an id but no content/title/status/template changes nothing and errors. action.input is ALWAYS a JSON object ({...}), even for an ability that takes a single field — e.g. {"id": 123}, never the bare value 123 or the string "123" on its own.',
 		'Always make destructive or publishing changes as a draft first and describe it back to the user before proposing a status change to "publish" — let them approve in chat.',
 		'Available abilities:',
 	);
@@ -226,7 +226,7 @@ add_action(
 function invocation_ability_chat( array $input = array() ) {
 	$message = trim( (string) ( $input['message'] ?? '' ) );
 	if ( '' === $message ) {
-		return new WP_Error( 'invocation_missing_message', __( 'A message is required.', 'invocation' ) );
+		return new WP_Error( 'invocation_missing_message', __( 'A message is required.', 'invocation' ), array( 'status' => 400 ) );
 	}
 
 	$history = is_array( $input['history'] ?? null ) ? $input['history'] : array();
@@ -250,7 +250,7 @@ function invocation_ability_chat( array $input = array() ) {
 
 	$decoded = json_decode( (string) $raw, true );
 	if ( ! is_array( $decoded ) || ! isset( $decoded['reply'] ) ) {
-		return new WP_Error( 'invocation_chat_bad_response', __( 'The AI provider returned an unexpected response.', 'invocation' ) );
+		return new WP_Error( 'invocation_chat_bad_response', __( 'The AI provider returned an unexpected response.', 'invocation' ), array( 'status' => 502 ) );
 	}
 
 	$action   = null;

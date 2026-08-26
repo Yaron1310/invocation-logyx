@@ -219,12 +219,12 @@ function invocation_ability_create_page( array $input = array() ) {
 	$post_type = (string) ( $input['postType'] ?? 'page' );
 
 	if ( '' === $title ) {
-		return new WP_Error( 'invocation_missing_title', __( 'A title is required.', 'invocation' ) );
+		return new WP_Error( 'invocation_missing_title', __( 'A title is required.', 'invocation' ), array( 'status' => 400 ) );
 	}
 
 	$type = get_post_type_object( $post_type );
 	if ( ! $type ) {
-		return new WP_Error( 'invocation_invalid_post_type', __( 'Unknown post type.', 'invocation' ) );
+		return new WP_Error( 'invocation_invalid_post_type', __( 'Unknown post type.', 'invocation' ), array( 'status' => 400 ) );
 	}
 
 	if ( ! in_array( $status, INVOCATION_PAGE_STATUSES, true ) ) {
@@ -275,7 +275,7 @@ function invocation_ability_update_page( array $input = array() ) {
 	$id   = (int) ( $input['id'] ?? 0 );
 	$post = $id ? get_post( $id ) : null;
 	if ( ! $post ) {
-		return new WP_Error( 'invocation_not_found', __( 'Post not found.', 'invocation' ) );
+		return new WP_Error( 'invocation_not_found', __( 'Post not found.', 'invocation' ), array( 'status' => 404 ) );
 	}
 
 	$data = array( 'ID' => $id );
@@ -304,7 +304,11 @@ function invocation_ability_update_page( array $input = array() ) {
 	}
 
 	if ( count( $data ) === 1 && null === $template ) {
-		return new WP_Error( 'invocation_nothing_to_update', __( 'Provide a title, content, status, or template to update.', 'invocation' ) );
+		return new WP_Error(
+			'invocation_nothing_to_update',
+			__( 'Provide a title, content, status, or template to update.', 'invocation' ),
+			array( 'status' => 400 )
+		);
 	}
 
 	// Only touch post fields when there is something beyond the ID to change.
@@ -332,7 +336,7 @@ function invocation_ability_duplicate_page( array $input = array() ) {
 	$source_id = (int) ( $input['id'] ?? 0 );
 	$source    = $source_id ? get_post( $source_id ) : null;
 	if ( ! $source ) {
-		return new WP_Error( 'invocation_not_found', __( 'Post not found.', 'invocation' ) );
+		return new WP_Error( 'invocation_not_found', __( 'Post not found.', 'invocation' ), array( 'status' => 404 ) );
 	}
 
 	$title = trim( (string) ( $input['title'] ?? '' ) );
