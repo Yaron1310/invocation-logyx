@@ -24,6 +24,33 @@ import { __ } from '@wordpress/i18n';
 
 import './admin.css';
 
+// Abilities whose entire input is a single "id" field. A model with no
+// per-ability schema to constrain a freeform "input" object sometimes
+// flattens a single-field object to the bare value (id: 123 -> just 123),
+// which the ability's own schema then rejects as "input is not of type
+// object" — cheaper to repair here than to round-trip a 400 back to chat.
+const INVOCATION_ID_ONLY_ABILITIES = [
+	'invocation/get-page',
+	'invocation/duplicate-page',
+];
+
+/**
+ * Coerce a proposed action's input into the shape its ability expects, for
+ * the narrow, known case of an id-only ability handed a bare id.
+ *
+ * @param {string} ability Ability id.
+ * @param {*}      input   The model's proposed input.
+ * @return {Object} A plain object safe to send as `input`.
+ */
+function normalizeActionInput( ability, input ) {
+	const isPlainObject =
+		input !== null && typeof input === 'object' && ! Array.isArray( input );
+	if ( ! isPlainObject && INVOCATION_ID_ONLY_ABILITIES.includes( ability ) ) {
+		return { id: Number( input ) };
+	}
+	return isPlainObject ? input : {};
+}
+
 // Abilities marked readonly are exposed as GET, not POST — core reads
 // `input` from query params there, so it must be sent as nested params
 // (input[query]=...), not a JSON body. Every write ability the chat can
@@ -381,7 +408,17 @@ function ChatApp() {
 				...prev,
 				{ role: 'assistant', content: result.reply },
 			] );
-			setPendingAction( result.action || null );
+			setPendingAction(
+				result.action
+					? {
+							...result.action,
+							input: normalizeActionInput(
+								result.action.ability,
+								result.action.input
+							),
+					  }
+					: null
+			);
 		} catch ( e ) {
 			setError(
 				e.message || __( 'Something went wrong.', 'invocation' )

@@ -32,18 +32,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function invocation_chat_available_abilities(): array {
 	return array(
-		'invocation/get-theme-context'   => 'Look up the site\'s theme.json design tokens.',
-		'invocation/list-blocks'         => 'List the block types actually registered on this site.',
-		'invocation/search-pages'        => 'Find a page/post by title and get its real id, status, and edit URL. Call this first whenever the user names a page (e.g. "the About page") and you do not already have its id from this conversation — never guess an id.',
-		'invocation/get-page'            => 'Fetch a page/post\'s current title and content (real block markup) by id. Call this before refine-block, and before update-page whenever only part of an existing page should change — never invent or guess what is currently on a page.',
-		'invocation/search-media'        => 'Find an existing image in the media library by keyword.',
-		'invocation/upload-media'        => 'Insert an image the user attached in chat into the media library. Only propose this when the user\'s message includes an attached image; its id is given in the conversation as ATTACHMENT_ID.',
-		'invocation/generate-layout'     => 'Generate a whole new section or page of block markup from a text brief.',
-		'invocation/refine-block'        => 'Rewrite one existing block in place (e.g. change a heading or a paragraph). Requires the block\'s exact current markup as blockMarkup — get it from get-page first, never invent it.',
-		'invocation/duplicate-page'      => 'Clone an existing page/post into a new draft, e.g. before editing a copy.',
-		'invocation/update-page'         => 'Change an existing page/post\'s title, content, status, or template by id.',
-		'invocation/create-page'         => 'Create a brand-new page/post from a title and block markup.',
-		'invocation/list-templates'      => 'List the page templates available on this theme.',
+		'invocation/get-theme-context'   => 'Look up the site\'s theme.json design tokens. Input is always {} (no fields).',
+		'invocation/list-blocks'         => 'List the block types actually registered on this site. Input is always {} (no fields).',
+		'invocation/search-pages'        => 'Find a page/post by title and get its real id, status, and edit URL. Call this first whenever the user names a page (e.g. "the About page") and you do not already have its id from this conversation — never guess an id. Input example: {"query": "about"}.',
+		'invocation/get-page'            => 'Fetch a page/post\'s current title and content (real block markup) by id. Call this before refine-block, and before update-page whenever only part of an existing page should change — never invent or guess what is currently on a page. Input is a JSON object with the id as a NUMBER field, never a bare number: {"id": 123}.',
+		'invocation/search-media'        => 'Find an existing image in the media library by keyword. Input example: {"query": "hero"}.',
+		'invocation/upload-media'        => 'Insert an image the user attached in chat into the media library. Only propose this when the user\'s message includes an attached image; its id is given in the conversation as ATTACHMENT_ID. Input example: {"data": "...base64...", "filename": "photo.jpg"}.',
+		'invocation/generate-layout'     => 'Generate a whole new section or page of block markup from a text brief. Input example: {"prompt": "a pricing section with three tiers"}.',
+		'invocation/refine-block'        => 'Rewrite one existing block in place (e.g. change a heading or a paragraph). Requires the block\'s exact current markup as blockMarkup — get it from get-page first, never invent it. Input example: {"blockMarkup": "<!-- wp:heading -->...<!-- /wp:heading -->", "instruction": "make it punchier"}.',
+		'invocation/duplicate-page'      => 'Clone an existing page/post into a new draft, e.g. before editing a copy. Input is a JSON object, id as a NUMBER field, never a bare number: {"id": 123}.',
+		'invocation/update-page'         => 'Change an existing page/post\'s title, content, status, or template by id. Input is always a JSON object with id as a NUMBER field plus whichever fields change: {"id": 123, "title": "New title"}.',
+		'invocation/create-page'         => 'Create a brand-new page/post from a title and block markup. Input example: {"title": "New Page", "content": "<!-- wp:paragraph -->...<!-- /wp:paragraph -->"}.',
+		'invocation/list-templates'      => 'List the page templates available on this theme. Input is always {} (no fields).',
 	);
 }
 
@@ -129,7 +129,7 @@ function invocation_chat_model_schema(): array {
  */
 function invocation_chat_system_instruction( array $input ): string {
 	$lines = array(
-		'You are the Invocation chat assistant for a WordPress site. You help the user find, draft, and edit pages by proposing one ability call at a time; you never invent block types, image URLs, block markup, or page ids that were not given to you or returned by a previous tool result. If the user names a page instead of giving you an id, call invocation/search-pages first and, if more than one result matches, ask the user which one before proposing any change to it. Before calling refine-block, or before update-page when only part of an existing page should change, call invocation/get-page first to get its real current content — never write blockMarkup from imagination.',
+		'You are the Invocation chat assistant for a WordPress site. You help the user find, draft, and edit pages by proposing one ability call at a time; you never invent block types, image URLs, block markup, or page ids that were not given to you or returned by a previous tool result. If the user names a page instead of giving you an id, call invocation/search-pages first and, if more than one result matches, ask the user which one before proposing any change to it. Before calling refine-block, or before update-page when only part of an existing page should change, call invocation/get-page first to get its real current content — never write blockMarkup from imagination. action.input is ALWAYS a JSON object ({...}), even for an ability that takes a single field — e.g. {"id": 123}, never the bare value 123 or the string "123" on its own.',
 		'Always make destructive or publishing changes as a draft first and describe it back to the user before proposing a status change to "publish" — let them approve in chat.',
 		'Available abilities:',
 	);
