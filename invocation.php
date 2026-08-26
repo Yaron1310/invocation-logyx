@@ -86,6 +86,7 @@ function invocation_bootstrap(): void {
 	require_once INVOCATION_DIR . 'inc/refine-block.php';
 	require_once INVOCATION_DIR . 'inc/pages.php';
 	require_once INVOCATION_DIR . 'inc/search-pages.php';
+	require_once INVOCATION_DIR . 'inc/get-page.php';
 	require_once INVOCATION_DIR . 'inc/templates.php';
 	require_once INVOCATION_DIR . 'inc/save-pattern.php';
 	require_once INVOCATION_DIR . 'inc/site-brief.php';

@@ -33,6 +33,7 @@ function invocation_mcp_abilities(): array {
 		'invocation/list-blocks',
 		'invocation/gather-site-context',
 		'invocation/search-pages',
+		'invocation/get-page',
 		'invocation/create-page',
 		'invocation/update-page',
 		'invocation/duplicate-page',

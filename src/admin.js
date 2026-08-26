@@ -33,6 +33,7 @@ import './admin.css';
 const INVOCATION_READONLY_ABILITIES = [
 	'invocation/chat',
 	'invocation/search-pages',
+	'invocation/get-page',
 	'invocation/search-media',
 	'invocation/get-theme-context',
 	'invocation/list-blocks',
