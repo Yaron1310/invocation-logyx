@@ -19,9 +19,28 @@ import {
 	SearchControl,
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
+import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 
 import './admin.css';
+
+// Abilities marked readonly are exposed as GET, not POST — core reads
+// `input` from query params there, so it must be sent as nested params
+// (input[query]=...), not a JSON body. Every write ability the chat can
+// propose (create/update/duplicate-page, refine-block, generate-layout,
+// upload-media, save-pattern, ...) is POST as usual; this is just the set
+// the Chat tab itself calls read-only abilities for.
+const INVOCATION_READONLY_ABILITIES = [
+	'invocation/chat',
+	'invocation/search-pages',
+	'invocation/search-media',
+	'invocation/get-theme-context',
+	'invocation/list-blocks',
+	'invocation/list-templates',
+	'invocation/list-patterns',
+	'invocation/search-internal-links',
+	'invocation/gather-site-context',
+];
 
 const OPTION = 'invocation_site_brief';
 
@@ -266,6 +285,13 @@ function readFileAsDataUrl( file ) {
  * @return {Promise<Object>} The ability's output.
  */
 function runAbility( ability, input ) {
+	if ( INVOCATION_READONLY_ABILITIES.includes( ability ) ) {
+		return apiFetch( {
+			path: addQueryArgs( `/wp-abilities/v1/abilities/${ ability }/run`, {
+				input,
+			} ),
+		} );
+	}
 	return apiFetch( {
 		path: `/wp-abilities/v1/abilities/${ ability }/run`,
 		method: 'POST',
