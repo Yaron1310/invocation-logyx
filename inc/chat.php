@@ -75,14 +75,16 @@ function invocation_chat_response_schema(): array {
 /**
  * JSON schema actually sent to the AI provider for one chat turn.
  *
- * Deliberately narrower than invocation_chat_response_schema(): some
- * providers' structured-output support (Gemini included) compiles the
- * schema to a strict proto-based format that rejects a "type" union like
- * ["object", "null"] ("Proto field is not repeating, cannot start list").
- * So `action` here is always an object — the model sets `hasAction: false`
- * and an empty ability/input to mean "no action" instead of using null —
- * and the execute callback below translates that back into the nullable
- * shape the ability actually promises its own callers.
+ * Deliberately narrower than invocation_chat_response_schema(): a "type"
+ * union like ["object", "null"] is JSON Schema, but Gemini's structured
+ * output only accepts the OpenAPI 3.0-style single `type` plus a sibling
+ * boolean `nullable` field — a bare type array 400s with "Proto field is
+ * not repeating, cannot start list". This uses `nullable` instead.
+ *
+ * (An earlier version of this schema worked around the same error with a
+ * hasAction boolean and an empty-string entry in the ability enum — that
+ * traded one 400 for another, since Gemini also rejects an empty string
+ * in `enum`. `nullable` is the documented, correct fix.)
  *
  * @return array<string, mixed>
  */
@@ -90,32 +92,29 @@ function invocation_chat_model_schema(): array {
 	return array(
 		'type'                 => 'object',
 		'properties'           => array(
-			'reply'     => array(
+			'reply'  => array(
 				'type'        => 'string',
 				'description' => 'What to say to the user this turn: a question, an explanation, or a summary of what you are about to do.',
 			),
-			'hasAction' => array(
-				'type'        => 'boolean',
-				'description' => 'True if you are proposing exactly one ability call this turn; false if you are only replying. Wait for the tool result (given back to you as the next turn) before proposing another action.',
-			),
-			'action'    => array(
+			'action' => array(
 				'type'                 => 'object',
-				'description'          => 'The proposed ability call. Ignored unless hasAction is true — when hasAction is false, set ability to "" and input to {}.',
+				'nullable'             => true,
+				'description'          => 'At most one ability call to propose this turn, or null to just reply. Wait for the tool result (given back to you as the next turn) before proposing another action.',
 				'properties'           => array(
 					'ability' => array(
 						'type' => 'string',
-						'enum' => array_merge( array_keys( invocation_chat_available_abilities() ), array( '' ) ),
+						'enum' => array_keys( invocation_chat_available_abilities() ),
 					),
 					'input'   => array(
 						'type'        => 'object',
-						'description' => 'The input object for that ability, matching its own input schema. {} when hasAction is false.',
+						'description' => 'The input object for that ability, matching its own input schema.',
 					),
 				),
 				'required'             => array( 'ability', 'input' ),
 				'additionalProperties' => false,
 			),
 		),
-		'required'             => array( 'reply', 'hasAction', 'action' ),
+		'required'             => array( 'reply', 'action' ),
 		'additionalProperties' => false,
 	);
 }
@@ -239,13 +238,11 @@ function invocation_ability_chat( array $input = array() ) {
 	}
 
 	$action   = null;
-	$proposed = is_array( $decoded['action'] ?? null ) ? $decoded['action'] : array();
-	$ability  = (string) ( $proposed['ability'] ?? '' );
-	if ( ! empty( $decoded['hasAction'] ) && '' !== $ability && array_key_exists( $ability, invocation_chat_available_abilities() ) ) {
-		// Only trust a well-formed, allow-listed proposal — anything else
-		// (hasAction false, an empty/unknown ability) means "just reply".
+	$proposed = $decoded['action'] ?? null;
+	if ( is_array( $proposed ) && array_key_exists( (string) ( $proposed['ability'] ?? '' ), invocation_chat_available_abilities() ) ) {
+		// Refuse to hand the client an action it can't or shouldn't call.
 		$action = array(
-			'ability' => $ability,
+			'ability' => (string) $proposed['ability'],
 			'input'   => is_array( $proposed['input'] ?? null ) ? $proposed['input'] : array(),
 		);
 	}
